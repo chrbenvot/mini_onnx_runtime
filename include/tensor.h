@@ -67,6 +67,17 @@ public:
         assert(sizeof(T) == m_bytes_per_elements && "Type mismatch in tensor access!");
         return reinterpret_cast<const T *>(m_buffer.data());
     }
+    // Bypass type checking for system I/O (like memcpy)
+    void *raw_data()
+    {
+        return m_buffer.data();
+    }
+
+    // Const version
+    const void *raw_data() const
+    {
+        return m_buffer.data();
+    }
     // Getters + Setters
     const std::string &name() const { return m_name; }
     void set_name(const std::string &name) { m_name = name; }

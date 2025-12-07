@@ -32,3 +32,6 @@ data/
 # --- Python Scripts Artifacts ---
 __pycache__/
 *.pyc
+
+#sh script
+count_lines.sh

@@ -14,7 +14,7 @@ public:
         Tensor* output = outputs[0];
         // The shape of the output needs to be the same as that of the input
         if (output->shape() != input->shape() || output->dtype() != input->dtype()) {
-            output->reshape(input->shape()); 
+            *output = Tensor(input->dtype(), input->shape()); 
             // Note: In a real engine, you'd set output->dtype here too, 
             // but your current Tensor implementation sets dtype in constructor.
         }
