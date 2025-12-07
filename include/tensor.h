@@ -72,6 +72,7 @@ public:
     void set_name(const std::string &name) { m_name = name; }
     const std::vector<int64_t> &shape() const { return m_shape; }
     const std::vector<int64_t> &strides() const { return m_strides; }
+    DataType dtype() const { return m_dtype; }
     int64_t size() const
     {
         return m_num_elements;

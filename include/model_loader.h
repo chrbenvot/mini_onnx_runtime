@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "onnx.pb.h" // Generated file
+#include "onnx.pb.h" 
 
 class ModelLoader {
 public:
