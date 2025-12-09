@@ -6,6 +6,7 @@
 #include "tensor.h"
 #include "operator.h"
 #include "model_loader.h"
+#include "timer.h"
 
 #include <operators/relu.h> // May need an umbrella header..
 #include <operators/flatten.h>
@@ -19,6 +20,9 @@
 #include <operators/global_avgpool.h>
 #include <operators/concat.h>
 #include <operators/upsample.h>
+#include <operators/leakyrelu.h>
+#include <operators/sigmoid.h>
+#include <operators/mul.h>
 
 class InferenceEngine
 {
@@ -37,6 +41,9 @@ public:
         register_op("GlobalAveragePool", new GlobalAvgPoolOp());
         register_op("Concat", new ConcatOp());
         register_op("Resize", new UpsampleOp());
+        register_op("LeakyRelu", new LeakyReluOp());
+        register_op("Sigmoid", new SigmoidOp());
+        register_op("Mul", new MulOp());
         /*
         TODO: add Ops as we go,eg: also probably make a list for this or something...
         register_op("Conv",new ConvOp());
@@ -67,6 +74,7 @@ public:
     void run(const Tensor &input_data)
     {
 
+        ScopedTimer total_timer("TOTAL INFERENCE");
         // Inject the input data
         if (m_graph.input_size() > 0)
         {
@@ -112,23 +120,12 @@ public:
             }
             // Execute
             std::cout << " Running Op" << node.op_type() << " (" << node.name() << ")" << std::endl;
-            op->forward(op_inputs, op_outputs, node);
-            // TODO: remove debug Print Checksum ---
-            float sum = 0.0f;
-            Tensor &out_tensor = *op_outputs[0]; // Assuming single output for simple ops
-            const float *out_ptr = out_tensor.data<float>();
-            int64_t size = out_tensor.size();
-
-            for (int64_t k = 0; k < size; ++k)
             {
-                sum += out_ptr[k];
-            }
+                std::string label = node.op_type() + " (" + node.name() + ")";
+                ScopedTimer layer_timer(label);
 
-            std::cout << "DEBUG_LAYER: " << node.name()
-                      << " | Shape: [";
-            for (auto d : out_tensor.shape())
-                std::cout << d << ",";
-            std::cout << "] | Sum: " << sum << std::endl;
+                op->forward(op_inputs, op_outputs, node);
+            }
         }
         std::cout << "Inference Complete." << std::endl;
     }
