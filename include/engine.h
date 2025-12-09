@@ -7,14 +7,27 @@
 #include "operator.h"
 #include "model_loader.h"
 
-#include <operators/relu.h>
-
+#include <operators/relu.h> // May need an umbrella header..
+#include <operators/flatten.h>
+#include <operators/conv.h>
+#include <operators/gemm.h>
+#include <operators/maxpool.h>
+#include <operators/batchnorm.h>
+#include <operators/softmax.h>
+#include <operators/avgpool.h>
 class InferenceEngine
 {
 public:
     InferenceEngine()
     {
         register_op("Relu", new ReluOp());
+        register_op("Conv", new ConvOp());
+        register_op("Flatten", new FlattenOp());
+        register_op("Gemm", new GemmOp());
+        register_op("MaxPool", new MaxPoolOp());
+        register_op("BatchNormalization", new BatchNorm());
+        register_op("Softmax", new SoftmaxOp());
+        register_op("AveragePool", new AvgPoolOp());
         /*
         TODO: add Ops as we go,eg:
         register_op("Conv",new ConvOp());
@@ -90,7 +103,7 @@ public:
             }
             // Execute
             std::cout << " Running Op" << node.op_type() << " (" << node.name() << ")" << std::endl;
-            op->forward(op_inputs, op_outputs);
+            op->forward(op_inputs, op_outputs, node);
         }
         std::cout << "Inference Complete." << std::endl;
     }

@@ -4,7 +4,7 @@
 
 class ReluOp : public Operator {
 public:
-    void forward(const std::vector<Tensor*>& inputs,std::vector<Tensor*>& outputs) override {
+    void forward(const std::vector<Tensor*>& inputs,std::vector<Tensor*>& outputs,const onnx::NodeProto& node_attributes) override {
         if (inputs.empty()|| outputs.empty()){
             std::cerr<< "Error: ReLU missing input or output tensors." << std::endl;
             return;
