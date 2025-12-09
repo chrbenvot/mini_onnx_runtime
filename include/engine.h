@@ -15,6 +15,11 @@
 #include <operators/batchnorm.h>
 #include <operators/softmax.h>
 #include <operators/avgpool.h>
+#include <operators/add.h>
+#include <operators/global_avgpool.h>
+#include <operators/concat.h>
+#include <operators/upsample.h>
+
 class InferenceEngine
 {
 public:
@@ -28,8 +33,12 @@ public:
         register_op("BatchNormalization", new BatchNorm());
         register_op("Softmax", new SoftmaxOp());
         register_op("AveragePool", new AvgPoolOp());
+        register_op("Add", new AddOp());
+        register_op("GlobalAveragePool", new GlobalAvgPoolOp());
+        register_op("Concat", new ConcatOp());
+        register_op("Resize", new UpsampleOp());
         /*
-        TODO: add Ops as we go,eg:
+        TODO: add Ops as we go,eg: also probably make a list for this or something...
         register_op("Conv",new ConvOp());
         */
     }
@@ -104,6 +113,22 @@ public:
             // Execute
             std::cout << " Running Op" << node.op_type() << " (" << node.name() << ")" << std::endl;
             op->forward(op_inputs, op_outputs, node);
+            // TODO: remove debug Print Checksum ---
+            float sum = 0.0f;
+            Tensor &out_tensor = *op_outputs[0]; // Assuming single output for simple ops
+            const float *out_ptr = out_tensor.data<float>();
+            int64_t size = out_tensor.size();
+
+            for (int64_t k = 0; k < size; ++k)
+            {
+                sum += out_ptr[k];
+            }
+
+            std::cout << "DEBUG_LAYER: " << node.name()
+                      << " | Shape: [";
+            for (auto d : out_tensor.shape())
+                std::cout << d << ",";
+            std::cout << "] | Sum: " << sum << std::endl;
         }
         std::cout << "Inference Complete." << std::endl;
     }

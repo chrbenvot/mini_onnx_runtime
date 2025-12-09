@@ -5,6 +5,8 @@
 #include "tensor.h"
 #include "operators/relu.h"
 #include "operators/conv.h"
+#include "operators/concat.h"
+#include "operators/upsample.h"
 
 void test_initialization()
 {
@@ -205,6 +207,71 @@ void test_conv_simple()
 
     std::cout << "  -> Passed" << std::endl;
 }
+void test_concat_upsample() {
+    std::cout << "Testing Upsample & Concat (Integration)..." << std::endl;
+
+    // --- 1. Setup Input (1x1x2x2) ---
+    // 1  2
+    // 3  4
+    Tensor input(DataType::FLOAT32, {1, 1, 2, 2});
+    float* in_ptr = input.data<float>();
+    in_ptr[0] = 1.0f; in_ptr[1] = 2.0f;
+    in_ptr[2] = 3.0f; in_ptr[3] = 4.0f;
+
+    // --- 2. Test Upsample (Resize) ---
+    UpsampleOp resize_op;
+    Tensor upsampled_out(DataType::FLOAT32, {}); // Shape will be inferred
+    
+    std::vector<Tensor*> up_inputs = {&input};
+    std::vector<Tensor*> up_outputs = {&upsampled_out};
+    onnx::NodeProto resize_node; // Default scale is 2.0x2.0 in our hardcoded op
+    
+    resize_op.forward(up_inputs, up_outputs, resize_node);
+
+    // Verify Upsample Shape (1x1x4x4)
+    assert(upsampled_out.shape()[2] == 4);
+    assert(upsampled_out.shape()[3] == 4);
+    
+    // Verify Data (Nearest Neighbor check)
+    // Top-left 2x2 block should all be '1'
+    float* up_ptr = upsampled_out.data<float>();
+    assert(up_ptr[0] == 1.0f); // (0,0)
+    assert(up_ptr[1] == 1.0f); // (0,1) -> Copy of 0
+    assert(up_ptr[4] == 1.0f); // (1,0) -> Copy of 0
+    assert(up_ptr[5] == 1.0f); // (1,1) -> Copy of 0
+    assert(up_ptr[2] == 2.0f); // (0,2) -> Original 2
+
+    // --- 3. Test Concat ---
+    ConcatOp concat_op;
+    Tensor concat_out(DataType::FLOAT32, {});
+
+    // We concat the upsampled tensor with itself along Axis 1 (Channel)
+    std::vector<Tensor*> cat_inputs = {&upsampled_out, &upsampled_out};
+    std::vector<Tensor*> cat_outputs = {&concat_out};
+    
+    onnx::NodeProto concat_node;
+    auto* axis_attr = concat_node.add_attribute();
+    axis_attr->set_name("axis");
+    axis_attr->set_i(1); // Axis 1 = Channels
+
+    concat_op.forward(cat_inputs, cat_outputs, concat_node);
+
+    // Verify Concat Shape: [1, 1+1, 4, 4] -> [1, 2, 4, 4]
+    assert(concat_out.shape()[0] == 1);
+    assert(concat_out.shape()[1] == 2);
+    assert(concat_out.shape()[2] == 4);
+    assert(concat_out.shape()[3] == 4);
+
+    // Verify Data content matches Python output
+    // The first 16 floats (Channel 0) should equal the next 16 floats (Channel 1)
+    float* c_ptr = concat_out.data<float>();
+    for (int i = 0; i < 16; ++i) {
+        assert(c_ptr[i] == c_ptr[16 + i]); // Channel 0 matches Channel 1
+        assert(c_ptr[i] == up_ptr[i]);     // Matches original upsampled data
+    }
+
+    std::cout << "  -> Passed" << std::endl;
+}
 
 int main()
 {
@@ -216,6 +283,7 @@ int main()
     test_relu();
     test_relu_int8();
     test_conv_simple();
+    test_concat_upsample();
     std::cout << "------------------" << std::endl;
     std::cout << "ALL TESTS PASSED!" << std::endl;
     return 0;

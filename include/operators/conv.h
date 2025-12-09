@@ -14,7 +14,9 @@ public:
         auto pads = get_int_list_attribute(node, "pads");
         int64_t pad_h = (pads.empty()) ? 0 : pads[0];
         int64_t pad_w = (pads.empty()) ? 0 : pads[1];
-        int64_t stride_h = 1, stride_w = 1; // TODO: add support for more attributes ( stride...)
+        auto strides = get_int_list_attribute(node, "strides");
+        int64_t stride_h = (strides.empty()) ? 1 : strides[0];
+        int64_t stride_w = (strides.empty()) ? 1 : strides[1]; // TODO: add support for more attributes ( stride...)
 
         // Get dimensions
         const auto &x_shape = X->shape();
