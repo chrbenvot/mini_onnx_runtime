@@ -20,12 +20,7 @@ public:
 
         // Get the epsilon attribute, used to avoid division by zero if the variance is zero
         // default is 1e-5
-        float epsilon = 1e-5f;
-        for (const auto &attr : node.attribute())
-        {
-            if (attr.name() == "epsilon")
-                epsilon = attr.f();
-        }
+        float epsilon = get_float_attribute(node, "epsilon", 1e-5f);
 
         const float *x_data = X->data<float>();
         const float *s_data = scale->data<float>();

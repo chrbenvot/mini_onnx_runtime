@@ -7,129 +7,113 @@
 #include "operator.h"
 #include "model_loader.h"
 #include "timer.h"
+#include "op_factory.h" // New include
 
-#include <operators/relu.h> // May need an umbrella header..
-#include <operators/flatten.h>
-#include <operators/conv.h>
-#include <operators/gemm.h>
-#include <operators/maxpool.h>
-#include <operators/batchnorm.h>
-#include <operators/softmax.h>
-#include <operators/avgpool.h>
-#include <operators/add.h>
-#include <operators/global_avgpool.h>
-#include <operators/concat.h>
-#include <operators/upsample.h>
-#include <operators/leakyrelu.h>
-#include <operators/sigmoid.h>
-#include <operators/mul.h>
+// The "Instruction" for a single layer
+struct ExecutionStep
+{
+    Operator *op;
+    const onnx::NodeProto *node;
+    std::vector<Tensor *> inputs;
+    std::vector<Tensor *> outputs;
+    std::string debug_name;
+};
 
 class InferenceEngine
 {
 public:
-    InferenceEngine()
-    {
-        register_op("Relu", new ReluOp());
-        register_op("Conv", new ConvOp());
-        register_op("Flatten", new FlattenOp());
-        register_op("Gemm", new GemmOp());
-        register_op("MaxPool", new MaxPoolOp());
-        register_op("BatchNormalization", new BatchNorm());
-        register_op("Softmax", new SoftmaxOp());
-        register_op("AveragePool", new AvgPoolOp());
-        register_op("Add", new AddOp());
-        register_op("GlobalAveragePool", new GlobalAvgPoolOp());
-        register_op("Concat", new ConcatOp());
-        register_op("Resize", new UpsampleOp());
-        register_op("LeakyRelu", new LeakyReluOp());
-        register_op("Sigmoid", new SigmoidOp());
-        register_op("Mul", new MulOp());
-        /*
-        TODO: add Ops as we go,eg: also probably make a list for this or something...
-        register_op("Conv",new ConvOp());
-        */
-    }
+    InferenceEngine() = default;
+
     ~InferenceEngine()
     {
-        // Cleanup dynamically allocated Operator Objects
-        for (auto &pair : m_op_registry)
+        // Now we own the operators stored in the plan
+        for (auto &step : m_execution_plan)
         {
-            delete pair.second;
+            delete step.op;
         }
     }
-    // Load the model
+
     void load_model(ModelLoader &loader)
     {
         m_graph = loader.graph();
-        // Load weights into the Tensor registry
-        // Here the engine owns all the tensors
+
+        // 1. Load Weights into Registry
         const auto &weights = loader.weights();
         for (const auto &pair : weights)
         {
             m_tensor_registry[pair.first] = pair.second;
         }
-        std::cout << "Engine ready. Tensors in Memory: " << m_tensor_registry.size() << std::endl;
+
+        std::cout << "Building Execution Plan..." << std::endl;
+
+        // 2. Build the Plan (Compile Time)
+        for (int i = 0; i < m_graph.node_size(); ++i)
+        {
+            const onnx::NodeProto &node = m_graph.node(i);
+
+            Operator *op = OpFactory::create(node.op_type());
+            if (!op)
+            {
+                std::cerr << "CRITICAL ERROR: Unsupported Operator '" << node.op_type() << "'" << std::endl;
+                continue;
+            }
+
+            ExecutionStep step;
+            step.op = op;
+            step.node = &node;
+            step.debug_name = node.op_type() + " (" + node.name() + ")";
+
+            // Pre-resolve Inputs
+            for (const auto &input_name : node.input())
+            {
+                // If input doesn't exist (activations from previous layers), create placeholder
+                if (m_tensor_registry.find(input_name) == m_tensor_registry.end())
+                {
+                    m_tensor_registry[input_name] = Tensor(DataType::FLOAT32, {}, input_name);
+                }
+                // Store POINTER to the tensor map entry.
+                // Map pointers are stable even if we add more keys later.
+                step.inputs.push_back(&m_tensor_registry[input_name]);
+            }
+
+            // Pre-resolve Outputs
+            for (const auto &output_name : node.output())
+            {
+                m_tensor_registry[output_name] = Tensor(DataType::FLOAT32, {}, output_name);
+                step.outputs.push_back(&m_tensor_registry[output_name]);
+            }
+
+            m_execution_plan.push_back(std::move(step));
+        }
+
+        std::cout << "Plan built. Steps: " << m_execution_plan.size() << std::endl;
     }
-    // The main execution loop
+
     void run(const Tensor &input_data)
     {
-
         ScopedTimer total_timer("TOTAL INFERENCE");
-        // Inject the input data
+
+        // 1. Set Input Data
+        // We copy the data into the registry, but the POINTER stored in execution_plan remains valid.
         if (m_graph.input_size() > 0)
         {
             std::string input_name = m_graph.input(0).name();
             m_tensor_registry[input_name] = input_data;
         }
-        std::cout << "Starting inference..." << std::endl;
 
-        // Iterate through the graph's nodes
+        std::cout << "Executing Plan..." << std::endl;
 
-        for (int i = 0; i < m_graph.node_size(); ++i)
+        // 2. Execute (Fast Loop)
+        for (auto &step : m_execution_plan)
         {
-            const onnx::NodeProto &node = m_graph.node(i);
-            // check if this is a Node our engine supports
-            if (m_op_registry.find(node.op_type()) == m_op_registry.end())
-            { // return iterator is the end so it's not in our registry
-                std::cerr << "CRITICAL WARNING: This model contains an Unsupported Operator '" << node.op_type() << "'" << std::endl;
-                continue; // This WILL CAUSE CRASHES, but for now we're just debugging
-            }
-            Operator *op = m_op_registry[node.op_type()];
-
-            // Prepare the inputs and outputs for this operator
-            std::vector<Tensor *> op_inputs;
-            std::vector<Tensor *> op_outputs;
-
-            // Look up the inputs in the registry
-            for (const auto &input_name : node.input())
             {
-                if (m_tensor_registry.find(input_name) == m_tensor_registry.end())
-                {
-                    std::cerr << "  Error: Missing input tensor '" << input_name << "'" << std::endl;
-                }
-                op_inputs.push_back(&m_tensor_registry[input_name]);
-            }
-
-            // Prepare the ouputs (Create empty ones in the registry)
-            for (const auto &output_name : node.output())
-            {
-                // Placeholder Tensor,the Operator is gonna resize it anyway
-                m_tensor_registry[output_name] = Tensor(DataType::FLOAT32, {}); // TODO: add other type supports?
-                m_tensor_registry[output_name].set_name(output_name);           // do it in constructor?
-                op_outputs.push_back(&m_tensor_registry[output_name]);
-            }
-            // Execute
-            std::cout << " Running Op" << node.op_type() << " (" << node.name() << ")" << std::endl;
-            {
-                std::string label = node.op_type() + " (" + node.name() + ")";
-                ScopedTimer layer_timer(label);
-
-                op->forward(op_inputs, op_outputs, node);
+                ScopedTimer layer_timer(step.debug_name);
+                step.op->forward(step.inputs, step.outputs, *step.node);
             }
         }
         std::cout << "Inference Complete." << std::endl;
     }
-    // Helper function to get the final result
+
     Tensor &get_output()
     {
         std::string output_name = m_graph.output(0).name();
@@ -138,10 +122,6 @@ public:
 
 private:
     onnx::GraphProto m_graph;
-    std::map<std::string, Tensor> m_tensor_registry; // For Memory(weights etc...)
-    std::map<std::string, Operator *> m_op_registry; // For Logic
-    void register_op(std::string name, Operator *op)
-    {
-        m_op_registry[name] = op;
-    }
+    std::map<std::string, Tensor> m_tensor_registry;
+    std::vector<ExecutionStep> m_execution_plan; // The list of instructions
 };
