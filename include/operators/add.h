@@ -7,6 +7,7 @@
 class AddOp : public Operator
 {
 public:
+    std::string get_op_type() const { return "Add"; }
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
                  const onnx::NodeProto &node, std::vector<float> &workspace) override
@@ -19,13 +20,14 @@ public:
         // --- OPTIMIZATION: Fast Path for Element-Wise Add ---
         // If shapes are identical, no broadcasting is needed.
         // We can just blast through the arrays with AVX.
-        if (A->shape() == B->shape()) {
+        if (A->shape() == B->shape())
+        {
             Y->reshape(A->shape());
-            
-            const float* a_ptr = A->data<float>();
-            const float* b_ptr = B->data<float>();
-            float* y_ptr = Y->data<float>();
-            
+
+            const float *a_ptr = A->data<float>();
+            const float *b_ptr = B->data<float>();
+            float *y_ptr = Y->data<float>();
+
             // Use the SIMD helper from simd_utils.h
             add_avx(a_ptr, b_ptr, y_ptr, A->size());
             return;

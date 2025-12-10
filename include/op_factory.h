@@ -18,6 +18,8 @@
 #include "operators/leakyrelu.h"
 #include "operators/sigmoid.h"
 #include "operators/mul.h"
+#include "operators/quantize_linear.h"
+#include "operators/dequantize_linear.h"
 
 class OpFactory {
 public:
@@ -37,6 +39,8 @@ public:
         if (type == "LeakyRelu") return new LeakyReluOp();
         if (type == "Sigmoid") return new SigmoidOp();
         if (type == "Mul") return new MulOp();
+        if (type == "QuantizeLinear") return new QuantizeLinearOp();
+        if (type == "DeuantizeLinear") return new DequantizeLinearOp();
         return nullptr;
     }
 };

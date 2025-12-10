@@ -9,6 +9,7 @@
 class ConvOp : public Operator
 {
 public:
+    std::string get_op_type() const { return "Conv"; }
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
                  const onnx::NodeProto &node, std::vector<float> &workspace) override
@@ -91,7 +92,7 @@ public:
         {
             workspace.resize(col_buffer_size);
         }
-        float* col_buffer_ptr = workspace.data();
+        float *col_buffer_ptr = workspace.data();
 
         const float *w_data = W->data<float>();
         const float *b_data = (B) ? B->data<float>() : nullptr;
@@ -106,9 +107,9 @@ public:
             // A. Perform im2col (Writing Transposed!)
             im2col_transposed(x_data, C, H, width, kern_h, kern_w, pad_h, pad_w, stride_h, stride_w, out_h, out_w, col_buffer_ptr);
 
-            // B. SIMD GEMM
-            // Weights Matrix (Rows) dot Transposed Col Buffer (Rows)
-            #pragma omp parallel for    // multithreading
+// B. SIMD GEMM
+// Weights Matrix (Rows) dot Transposed Col Buffer (Rows)
+#pragma omp parallel for // multithreading
             for (int m = 0; m < M_gemm; ++m)
             {
                 const float *w_row = w_data + m * K_gemm; // Contiguous Weights

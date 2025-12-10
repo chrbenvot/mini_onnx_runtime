@@ -6,6 +6,7 @@
 class ReluOp : public Operator
 {
 public:
+std::string get_op_type() const { return "Relu"; }
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
                  const onnx::NodeProto &node,

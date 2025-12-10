@@ -116,6 +116,7 @@ int main(int argc, char **argv)
         std::cerr << "Inference Failed: " << e.what() << std::endl;
         return 1;
     }
+    engine.dump_graph("model_graph.dot");
 
     // 3. Decode Output & Debug
     Tensor &output = engine.get_output();

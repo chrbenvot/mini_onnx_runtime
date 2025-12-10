@@ -7,9 +7,10 @@
 class SoftmaxOp : public Operator
 {
 public:
+    std::string get_op_type() const { return "Softmax"; }
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,std::vector<float>& workspace) override
+                 const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
 
         Tensor *input = inputs[0];

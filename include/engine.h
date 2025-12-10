@@ -7,7 +7,7 @@
 #include "operator.h"
 #include "model_loader.h"
 #include "timer.h"
-#include "op_factory.h" 
+#include "op_factory.h"
 
 // The "Instruction" for a single layer
 struct ExecutionStep
@@ -108,7 +108,7 @@ public:
         {
             {
                 ScopedTimer layer_timer(step.debug_name);
-                step.op->forward(step.inputs, step.outputs, *step.node,m_workspace);
+                step.op->forward(step.inputs, step.outputs, *step.node, m_workspace);
             }
         }
         std::cout << "Inference Complete." << std::endl;
@@ -118,6 +118,71 @@ public:
     {
         std::string output_name = m_graph.output(0).name();
         return m_tensor_registry[output_name];
+    }
+    void dump_graph(const std::string &filename) const
+    {
+        std::ofstream file(filename);
+        if (!file.is_open())
+        {
+            std::cerr << "Error: Could not open file " << filename << std::endl;
+            return;
+        }
+
+        // DOT language header
+        file << "digraph G {" << std::endl;
+        file << "  rankdir=LR;" << std::endl; // Left to Right layout
+        file << "  node [shape=box, style=\"filled\", fillcolor=\"#E6E6FF\"];" << std::endl;
+
+        // 1. Define all Tensors (Nodes)
+        // Set colors based on whether it's a constant/weight or a dynamic activation
+        for (const auto &pair : m_tensor_registry)
+        {
+            bool is_weight = (pair.second.size() > 0 && pair.second.shape().size() > 1 && pair.second.shape()[0] == 1); // Simple heuristic
+            std::string color = is_weight ? "gray" : "white";
+            std::string label = pair.first + "\\nShape: [";
+            for (size_t i = 0; i < pair.second.shape().size(); ++i)
+            {
+                label += std::to_string(pair.second.shape()[i]);
+                if (i < pair.second.shape().size() - 1)
+                    label += ",";
+            }
+            label += "]";
+
+            file << "  \"" << pair.first << "\" [label=\"" << label << "\", fillcolor=\"" << color << "\"];" << std::endl;
+        }
+
+        // 2. Define all Operators (Nodes)
+        // Operators will be colored light blue
+        file << "  node [shape=box, style=\"filled\", fillcolor=\"#B0E0E6\"];" << std::endl;
+        for (const auto &step : m_execution_plan)
+        {
+            file << "  \"" << step.node->name() << "\" [label=\"" << step.op->get_op_type() << "\"];" << std::endl;
+        }
+
+        // 3. Define Edges (Connections)
+        // Loop through the execution plan again to draw the flow.
+        file << "  edge [color=black];" << std::endl;
+        for (const auto &step : m_execution_plan)
+        {
+            const onnx::NodeProto *node = step.node;
+            std::string op_name = node->name();
+
+            // Edges from Input Tensors to Operator
+            for (const auto &input_name : node->input())
+            {
+                file << "  \"" << input_name << "\" -> \"" << op_name << "\" [label=\"in\"];" << std::endl;
+            }
+
+            // Edges from Operator to Output Tensors
+            for (const auto &output_name : node->output())
+            {
+                file << "  \"" << op_name << "\" -> \"" << output_name << "\" [label=\"out\"];" << std::endl;
+            }
+        }
+
+        file << "}" << std::endl;
+        file.close();
+        std::cout << "Graphviz DOT file written to " << filename << std::endl;
     }
 
 private:

@@ -7,9 +7,10 @@
 class UpsampleOp : public Operator
 {
 public:
+    std::string get_op_type() const { return "Resample"; }
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,std::vector<float>& workspace) override
+                 const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
         const Tensor *X = inputs[0];
         Tensor *Y = outputs[0];
@@ -24,34 +25,37 @@ public:
         float scale_h = 1.0f;
         float scale_w = 1.0f;
 
-        // 1. Parse Scales 
+        // 1. Parse Scales
         if (inputs.size() > 2 && inputs[2]->size() > 0)
         {
             // Case A: Scaling factors provided
             const Tensor *scales_tensor = inputs[2];
             const float *s_data = scales_tensor->data<float>();
-            
+
             // Scales is usually [N_scale, C_scale, H_scale, W_scale]
             // We assume 4D input, so we look at indices 2 and 3
-            if (scales_tensor->size() >= 4) {
+            if (scales_tensor->size() >= 4)
+            {
                 scale_h = s_data[2];
                 scale_w = s_data[3];
-            } else if (scales_tensor->size() == 2) {
+            }
+            else if (scales_tensor->size() == 2)
+            {
                 // Rare 2D case
                 scale_h = s_data[0];
                 scale_w = s_data[1];
             }
-        } 
+        }
         else if (inputs.size() > 3 && inputs[3]->size() > 0)
         {
             // Case B: Target sizes provided (Input[3])
-            const Tensor* sizes_tensor = inputs[3];
-            const int64_t* size_data = sizes_tensor->data<int64_t>(); // Usually INT64
+            const Tensor *sizes_tensor = inputs[3];
+            const int64_t *size_data = sizes_tensor->data<int64_t>(); // Usually INT64
             // Sizes tensor shape matches Input rank (N,C,H,W)
             // We want the new H and W (indices 2 and 3)
             int64_t target_h = size_data[2];
             int64_t target_w = size_data[3];
-            
+
             // Derive scale from target size
             scale_h = static_cast<float>(target_h) / static_cast<float>(H);
             scale_w = static_cast<float>(target_w) / static_cast<float>(W);
@@ -71,7 +75,7 @@ public:
         float inv_scale_w = 1.0f / scale_w;
 
         // 3. Execution (Nearest Neighbor "Asymmetric")
-        
+
         for (int n = 0; n < N; ++n)
         {
             for (int c = 0; c < C; ++c)
@@ -81,9 +85,9 @@ public:
                     // Map output Y back to input Y
                     // Using "floor" behavior (standard Asymmetric mode)
                     int64_t iy = static_cast<int64_t>(oy * inv_scale_h);
-                    
+
                     // Clamp to handle floating point errors or edge cases
-                    iy = std::min(iy, H - 1); 
+                    iy = std::min(iy, H - 1);
 
                     // Optimization: Calculate row pointers once per row
                     int64_t in_row_offset = n * (C * H * W) + c * (H * W) + iy * W;
