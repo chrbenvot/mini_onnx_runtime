@@ -10,7 +10,7 @@ class Operator
 {
 public:
     virtual ~Operator() = default;
-    virtual void forward(const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs,const onnx::NodeProto& node) = 0;
+    virtual void forward(const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs,const onnx::NodeProto& node,std::vector<float>& workspace) = 0;
     std::string name;
 protected:
     // Helper for extracting attributes (like pad/kernel size from) from an ONNX protoNode

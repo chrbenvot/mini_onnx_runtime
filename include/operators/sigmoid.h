@@ -7,7 +7,7 @@ class SigmoidOp : public Operator
 public:
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node) override
+                 const onnx::NodeProto &node,std::vector<float>& workspace) override
     {
         Tensor *input = inputs[0];
         Tensor *output = outputs[0];

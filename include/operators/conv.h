@@ -11,7 +11,7 @@ class ConvOp : public Operator
 public:
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node) override
+                 const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
 
         const Tensor *X = inputs[0];
@@ -87,7 +87,11 @@ public:
         int64_t col_buffer_size = K_gemm * N_gemm;
         // Optimization: Keep this vector static/thread-local to avoid allocs if you want,
         // but for now local is safer.
-        std::vector<float> col_buffer(col_buffer_size);
+        if (workspace.size() < col_buffer_size)
+        {
+            workspace.resize(col_buffer_size);
+        }
+        float* col_buffer_ptr = workspace.data();
 
         const float *w_data = W->data<float>();
         const float *b_data = (B) ? B->data<float>() : nullptr;
@@ -100,7 +104,7 @@ public:
             float *y_out_ptr = y_data + n * (out_c * out_h * out_w);
 
             // A. Perform im2col (Writing Transposed!)
-            im2col_transposed(x_data, C, H, width, kern_h, kern_w, pad_h, pad_w, stride_h, stride_w, out_h, out_w, col_buffer.data());
+            im2col_transposed(x_data, C, H, width, kern_h, kern_w, pad_h, pad_w, stride_h, stride_w, out_h, out_w, col_buffer_ptr);
 
             // B. SIMD GEMM
             // Weights Matrix (Rows) dot Transposed Col Buffer (Rows)
@@ -111,7 +115,7 @@ public:
 
                 for (int i = 0; i < N_gemm; ++i)
                 {
-                    const float *col_row = col_buffer.data() + i * K_gemm; // Contiguous Patch
+                    const float *col_row = col_buffer_ptr + i * K_gemm; // Contiguous Patch
 
                     // --- AVX ACCELERATION ---
                     // Dot product of two contiguous float arrays of length K_gemm

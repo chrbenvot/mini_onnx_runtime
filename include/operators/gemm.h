@@ -6,7 +6,7 @@ class GemmOp : public Operator {
 public:
     void forward(const std::vector<Tensor*>& inputs, 
                  std::vector<Tensor*>& outputs, 
-                 const onnx::NodeProto& node) override {
+                 const onnx::NodeProto& node,std::vector<float>& workspace) override {
         
         const Tensor* A = inputs[0];
         const Tensor* B = inputs[1];

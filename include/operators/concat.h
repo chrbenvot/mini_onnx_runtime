@@ -6,7 +6,7 @@ class ConcatOp : public Operator
 public:
     void forward(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node) override
+                 const onnx::NodeProto &node,std::vector<float>& workspace) override
     {
         // On which axis are we trying to concat?
         int64_t axis = get_int_attribute(node, "axis", 1); // we'll concat on batch by default

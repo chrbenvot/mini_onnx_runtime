@@ -108,7 +108,7 @@ public:
         {
             {
                 ScopedTimer layer_timer(step.debug_name);
-                step.op->forward(step.inputs, step.outputs, *step.node);
+                step.op->forward(step.inputs, step.outputs, *step.node,m_workspace);
             }
         }
         std::cout << "Inference Complete." << std::endl;
@@ -124,4 +124,5 @@ private:
     onnx::GraphProto m_graph;
     std::map<std::string, Tensor> m_tensor_registry;
     std::vector<ExecutionStep> m_execution_plan; // The list of instructions
+    std::vector<float> m_workspace;
 };
