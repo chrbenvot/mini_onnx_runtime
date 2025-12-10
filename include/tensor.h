@@ -13,7 +13,8 @@ enum class DataType
     FLOAT32,
     INT64,
     INT32,
-    INT8
+    INT8,
+    UINT8
 };
 
 class Tensor
