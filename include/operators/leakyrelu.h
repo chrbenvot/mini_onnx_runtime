@@ -1,6 +1,7 @@
 #pragma once
 #include "../operator.h"
 #include <algorithm>
+#include "../simd_utils.h"
 
 class LeakyReluOp : public Operator
 {
@@ -18,10 +19,6 @@ public:
         float *out_ptr = output->data<float>();
         int64_t size = input->size();
 
-        for (int64_t i = 0; i < size; ++i)
-        {
-            float val = in_ptr[i];
-            out_ptr[i] = (val >= 0) ? val : (val * alpha);
-        }
+        leaky_relu_avx(in_ptr,out_ptr,size,alpha);
     }
 };

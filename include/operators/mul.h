@@ -12,6 +12,12 @@ public:
         const Tensor* A = inputs[0];
         const Tensor* B = inputs[1];
         Tensor* Y = outputs[0];
+        // Fast Path with SIMD
+        if (A->shape() == B->shape()) {
+            Y->reshape(A->shape());
+            mul_avx(A->data<float>(), B->data<float>(), Y->data<float>(), A->size());
+            return;
+        }
 
         // 1. Determine Output Shape (Max of dims)
         // We align dimensions to the right (NumPy style)
