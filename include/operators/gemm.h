@@ -36,6 +36,7 @@ public:
         int64_t b_stride_0 = B->shape()[1];
 
         // 4. The Loop
+        #pragma omp parallel for // multithreading
         for (int m = 0; m < M; ++m) {
             for (int n = 0; n < N; ++n) {
                 

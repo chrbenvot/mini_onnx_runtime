@@ -60,6 +60,7 @@ public:
 
         for (int n = 0; n < N; ++n)
         {
+            #pragma omp parallel for schedule(static)
             for (int c = 0; c < C; ++c)
             {
                 for (int oy = 0; oy < out_h; ++oy)

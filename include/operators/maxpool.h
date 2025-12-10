@@ -109,6 +109,7 @@ public:
         std::fill(y_data, y_data + Y->size(), -FLT_MAX);
 
         for (int n = 0; n < N; ++n) {
+            #pragma omp parallel for schedule(static)
             for (int c = 0; c < C; ++c) {
                 for (int oy = 0; oy < out_h; ++oy) {
                     for (int ox = 0; ox < out_w; ++ox) {

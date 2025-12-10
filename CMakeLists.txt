@@ -19,6 +19,11 @@ endif()
 
 # 3. Find External Libraries (Protobuf is required for ONNX)
 find_package(Protobuf REQUIRED)
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    # Adds -fopenmp flags to compiler and linker
+    link_libraries(OpenMP::OpenMP_CXX)
+endif()
 
 # 4. Include Directories (Where are your .h files?)
 include_directories(
@@ -44,7 +49,7 @@ add_executable(engine
 )
 
 # Link the executable to the Protobuf library
-target_link_libraries(engine ${PROTOBUF_LIBRARIES})
+target_link_libraries(engine ${PROTOBUF_LIBRARIES} OpenMP::OpenMP_CXX)
 
 # --------------------------------------------------------
 # Target 2: The Unit Test

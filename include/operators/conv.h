@@ -108,6 +108,7 @@ public:
 
             // B. SIMD GEMM
             // Weights Matrix (Rows) dot Transposed Col Buffer (Rows)
+            #pragma omp parallel for    // multithreading
             for (int m = 0; m < M_gemm; ++m)
             {
                 const float *w_row = w_data + m * K_gemm; // Contiguous Weights

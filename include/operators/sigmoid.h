@@ -17,6 +17,7 @@ public:
         float *out_ptr = output->data<float>();
         int64_t size = input->size();
 
+        #pragma omp parallel for if(size > 4096)
         for (int i = 0; i < size; ++i)
         {
             float val = in_ptr[i];
