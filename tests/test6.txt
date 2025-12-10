@@ -1,0 +1,68 @@
+--- Tiny YOLO v2 Inference ---
+Building Execution Plan...
+Plan built. Steps: 33
+Starting inference...
+Executing Plan...
+[TIMER] Mul (Mul): 19.957 ms
+[TIMER] Add (Add): 19.533 ms
+[TIMER] Conv (convolution): 62.523 ms
+[TIMER] BatchNormalization (batchnorm): 1.882 ms
+[TIMER] LeakyRelu (activation): 6.911 ms
+[TIMER] MaxPool (pooling): 5.755 ms
+[TIMER] Conv (convolution1): 74.581 ms
+[TIMER] BatchNormalization (batchnorm1): 2.968 ms
+[TIMER] LeakyRelu (activation1): 4.724 ms
+[TIMER] MaxPool (pooling1): 2.287 ms
+[TIMER] Conv (convolution2): 58.603 ms
+[TIMER] BatchNormalization (batchnorm2): 0.344 ms
+[TIMER] LeakyRelu (activation2): 1.362 ms
+[TIMER] MaxPool (pooling2): 1.16 ms
+[TIMER] Conv (convolution3): 30.859 ms
+[TIMER] BatchNormalization (batchnorm3): 0.172 ms
+[TIMER] LeakyRelu (activation3): 0.671 ms
+[TIMER] MaxPool (pooling3): 0.53 ms
+[TIMER] Conv (convolution4): 26.158 ms
+[TIMER] BatchNormalization (batchnorm4): 0.071 ms
+[TIMER] LeakyRelu (activation4): 0.335 ms
+[TIMER] MaxPool (pooling4): 0.264 ms
+[TIMER] Conv (convolution5): 25.987 ms
+[TIMER] BatchNormalization (batchnorm5): 0.03 ms
+[TIMER] LeakyRelu (activation5): 0.098 ms
+[TIMER] MaxPool (pooling5): 0.579 ms
+[TIMER] Conv (convolution6): 102.928 ms
+[TIMER] BatchNormalization (batchnorm6): 0.059 ms
+[TIMER] LeakyRelu (activation6): 0.305 ms
+[TIMER] Conv (convolution7): 222.254 ms
+[TIMER] BatchNormalization (batchnorm7): 0.072 ms
+[TIMER] LeakyRelu (activation7): 0.394 ms
+[TIMER] Conv (convolution8): 3.053 ms
+Inference Complete.
+[TIMER] TOTAL INFERENCE: 677.957 ms
+
+[Global Debug]
+Output Shape: [1, 125, 13, 13]
+Output Sum:   -6906.53
+
+=== Detections (Threshold > 0.3) ===
+!! FOUND OBJECT !! Grid(6,5) Conf: 0.710987
+!! FOUND OBJECT !! Grid(7,5) Conf: 0.922991
+!! FOUND OBJECT !! Grid(7,5) Conf: 0.345879
+!! FOUND OBJECT !! Grid(6,6) Conf: 0.580153
+!! FOUND OBJECT !! Grid(6,6) Conf: 0.381909
+!! FOUND OBJECT !! Grid(7,6) Conf: 0.968574
+!! FOUND OBJECT !! Grid(7,6) Conf: 0.796571
+!! FOUND OBJECT !! Grid(7,7) Conf: 0.980664
+!! FOUND OBJECT !! Grid(7,7) Conf: 0.649341
+!! FOUND OBJECT !! Grid(7,8) Conf: 0.87314
+
+[Max Objectness Search]
+Highest Confidence Found: 0.980664
+Location: Grid(7,7) Anchor 2
+
+[Raw Logits at Best Location]
+  Tx (Box X): 0.0685356
+  Ty (Box Y): 0.199103
+  Tw (Width): 0.421534
+  Th (Height): 0.00712365
+  To (Objectness): 3.92627 -> Sigmoid -> 0.980664
+  Class Scores (First 5): -2.27451 -2.991 1.70734 -1.14492 -3.56126 

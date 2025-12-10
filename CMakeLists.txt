@@ -1,61 +1,93 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.18)  # >=3.18 for CUDA targets support
 
-# 1. Name your project
-project(OnnxEngine)
+project(OnnxEngine LANGUAGES CXX CUDA)
 
-# 2. Set C++ Standard (We need C++17 for modern features)
+# -----------------------------
+# 1. C++ Standard
+# -----------------------------
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#Enable SIMD / AVX Optimizations ---
+
+# -----------------------------
+# 2. CUDA settings
+# -----------------------------
+# Set target architectures (compute capability)
+set(CMAKE_CUDA_ARCHITECTURES 75 86)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+add_compile_options($<$<COMPILE_LANGUAGE:CUDA>:-rdc=true>) # Enable relocatable device code
+
+# -----------------------------
+# 3. Find Libraries
+# -----------------------------
+find_package(Protobuf REQUIRED)
+find_package(OpenMP REQUIRED)
+find_package(CUDAToolkit REQUIRED COMPONENTS cublas)
+
+# -----------------------------
+# 4. Include directories
+# -----------------------------
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnx
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${PROTOBUF_INCLUDE_DIRS}
+    ${CUDAToolkit_INCLUDE_DIRS}
+)
+
+# -----------------------------
+# 5. Protobuf ONNX generation
+# -----------------------------
+set(ONNX_PROTO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnx)
+protobuf_generate_cpp(ONNX_PROTO_SRCS ONNX_PROTO_HDRS ${ONNX_PROTO_DIR}/onnx.proto)
+add_library(onnx_proto ${ONNX_PROTO_SRCS} ${ONNX_PROTO_HDRS})
+target_link_libraries(onnx_proto PRIVATE ${PROTOBUF_LIBRARIES})
+
+# -----------------------------
+# 6. Compile options for CPU SIMD
+# -----------------------------
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # -mavx2: Enable AVX2 instructions
-    # -mfma:  Enable Fused Multiply Add (faster dot products)
-    # -O3:    Maximum optimization level
     add_compile_options(-mavx2 -mfma -O3)
 elseif(MSVC)
-    # Windows/Visual Studio flags
     add_compile_options(/arch:AVX2 /O2)
 endif()
 
-# 3. Find External Libraries (Protobuf is required for ONNX)
-find_package(Protobuf REQUIRED)
-find_package(OpenMP REQUIRED)
-if(OpenMP_CXX_FOUND)
-    # Adds -fopenmp flags to compiler and linker
-    link_libraries(OpenMP::OpenMP_CXX)
-endif()
-
-# 4. Include Directories (Where are your .h files?)
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include          # Your headers (tensor.h)
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnx # The onnx.proto file
-    ${CMAKE_CURRENT_BINARY_DIR}                  # Where generated ONNX files land
-    ${PROTOBUF_INCLUDE_DIRS}                     # Protobuf headers
+# -----------------------------
+# 7. Engine target
+# -----------------------------
+add_executable(engine
+    src/main.cpp
 )
 
-# 5. Generate ONNX C++ files from onnx.proto
-# This runs the 'protoc' command automatically for you
-set(ONNX_PROTO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnx)
-set(ONNX_PROTO_FILE ${ONNX_PROTO_DIR}/onnx.proto)
-
-protobuf_generate_cpp(ONNX_PROTO_SRCS ONNX_PROTO_HDRS ${ONNX_PROTO_FILE})
-
-# --------------------------------------------------------
-# Target 1: The Main Engine Executable
-# --------------------------------------------------------
-add_executable(engine 
-    src/main.cpp 
-    ${ONNX_PROTO_SRCS} # Include the generated .pb.cc file
+target_link_libraries(engine
+    onnx_proto
+    OpenMP::OpenMP_CXX
+    CUDA::cudart
+    CUDA::cublas
 )
 
-# Link the executable to the Protobuf library
-target_link_libraries(engine ${PROTOBUF_LIBRARIES} OpenMP::OpenMP_CXX)
+target_include_directories(engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# --------------------------------------------------------
-# Target 2: The Unit Test
-# --------------------------------------------------------
-add_executable(test_tensor tests/test_tensor.cpp ${ONNX_PROTO_SRCS})
+# -----------------------------
+# 8. Unit test target
+# -----------------------------
+add_executable(test_tensor
+    tests/test_tensor.cpp
+)
 
-# (Optional) Link libraries to test if needed later
-target_link_libraries(test_tensor ${PROTOBUF_LIBRARIES})
+target_link_libraries(test_tensor
+    onnx_proto
+    OpenMP::OpenMP_CXX
+    CUDA::cudart
+    CUDA::cublas
+)
+
 target_include_directories(test_tensor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# cuda test target
+add_executable(test_cuda tests/test_cuda.cpp)
+
+# CRITICAL: Tell CMake to use the CUDA compiler and link necessary libs
+# We also need to include your custom headers and the CUDA headers
+target_link_libraries(test_cuda PUBLIC CUDA::cudart)
+target_include_directories(test_cuda PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
