@@ -1,80 +1,96 @@
 #pragma once
 #include "../operator.h"
 
-class GemmOp : public Operator
-{
+class GemmOp : public Operator {
 public:
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node) override
-    {
-        // Inputs: A (Input), B (Weight) C(Bias)
-        Tensor *A = inputs[0]; // Shape : [batch,N]
-        Tensor *B = inputs[1]; // Shape : [M,N]
-        Tensor *C = inputs[2]; // Shape : [M]
-        Tensor *Y = outputs[0];
+    void forward(const std::vector<Tensor*>& inputs, 
+                 std::vector<Tensor*>& outputs, 
+                 const onnx::NodeProto& node) override {
+        
+        const Tensor* A = inputs[0];
+        const Tensor* B = inputs[1];
+        const Tensor* C = (inputs.size() > 2) ? inputs[2] : nullptr;
+        Tensor* Y = outputs[0];
 
-        // Parse attributtes (alpha,beta,transB)
+        //  Get Attributes
+        float alpha = get_float_attribute(node, "alpha", 1.0f);
+        float beta  = get_float_attribute(node, "beta", 1.0f);
+        int64_t transA = get_int_attribute(node, "transA", 0);
         int64_t transB = get_int_attribute(node, "transB", 0);
-        float alpha = 1.0f;
-        float beta = 1.0f; // simplified
 
-        int64_t batch = A->shape()[0];
-        int64_t input_dim = A->shape()[1];
-        int64_t output_dim = (transB) ? B->shape()[0] : B->shape()[1];
-        // Sanity Check to prevent Segfaults
-        if (transB)
-        {
-            if (B->shape()[1] != input_dim)
-            {
-                std::cerr << "Gemm Error: Dimension mismatch. A=" << input_dim << ", B'=" << B->shape()[1] << std::endl;
-                return;
-            }
-        }
-        else
-        {
-            if (B->shape()[0] != input_dim)
-            {
-                std::cerr << "Gemm Error: Dimension mismatch. A=" << input_dim << ", B=" << B->shape()[0] << std::endl;
-                return;
-            }
+        //  Determine Dimensions
+        // A is [M, K] normally, or [K, M] if transposed
+        int64_t M = (transA == 0) ? A->shape()[0] : A->shape()[1];
+        int64_t K = (transA == 0) ? A->shape()[1] : A->shape()[0];
+        
+        // B is [K, N] normally, or [N, K] if transposed
+        int64_t N = (transB == 0) ? B->shape()[1] : B->shape()[0];
+        
+        // Quick verify K matches
+        int64_t K_check = (transB == 0) ? B->shape()[0] : B->shape()[1];
+        if (K != K_check) {
+            std::cerr << "Error: Gemm Dimension Mismatch K=" << K << " vs " << K_check << std::endl;
+            return;
         }
 
-        // Resize output
-        Y->reshape({batch, output_dim});
-        const float *a_ptr = A->data<float>(); // TODO: again,add int support
-        const float *b_ptr = B->data<float>();
-        const float *c_ptr = C->data<float>();
-        float *y_ptr = Y->data<float>();
+        Y->reshape({M, N});
 
-        // Matrix Multiplication Loop
-        // Y= A* B + C
-        for (int b = 0; b < batch; ++b)
-        {
-            for (int m = 0; m < output_dim; ++m)
-            {
+        const float* a_data = A->data<float>();
+        const float* b_data = B->data<float>();
+        const float* c_data = (C) ? C->data<float>() : nullptr;
+        float* y_data = Y->data<float>();
+
+        //  Stride Logic
+        // We need to know how much to jump in the RAW buffer to get to the next element.
+        // Raw Shape A: [Dim0, Dim1]
+        int64_t a_stride_0 = A->shape()[1]; // Jump one row
+        int64_t a_stride_1 = 1;             // Jump one col
+
+        int64_t b_stride_0 = B->shape()[1];
+        int64_t b_stride_1 = 1;
+
+        //  The Loop
+        for (int m = 0; m < M; ++m) {
+            for (int n = 0; n < N; ++n) {
+                
                 float sum = 0.0f;
-                // Dot product
-                for (int n = 0; n < input_dim; ++n)
-                {
-                    float a_val = a_ptr[b * input_dim + n];
-                    // Handle transpose logic
-                    float b_val;
-                    if (transB)
-                    {
-                        // B is [Out, In] -> we want row m, col n
-                        b_val = b_ptr[m * input_dim + n];
-                    }
-                    else
-                    {
-                        // B is [In, Out] -> we want row n, col m
-                        b_val = b_ptr[n * output_dim + m];
-                    }
-                    sum += a_val * b_val;
+
+                for (int k = 0; k < K; ++k) {
+                    // Logic:
+                    // If TransA=0: We want A[m, k]. Raw Index = m * stride0 + k * stride1
+                    // If TransA=1: We want A[k, m]. Raw Index = k * stride0 + m * stride1
+                    
+                    int64_t a_idx = (transA == 0) 
+                                  ? (m * a_stride_0 + k * a_stride_1)
+                                  : (k * a_stride_0 + m * a_stride_1); // <--- Fixed Stride Logic
+
+                    int64_t b_idx = (transB == 0)
+                                  ? (k * b_stride_0 + n * b_stride_1)
+                                  : (n * b_stride_0 + k * b_stride_1); // <--- Fixed Stride Logic
+                    
+                    sum += a_data[a_idx] * b_data[b_idx];
                 }
-                // Add bias (broadcasted across batches)
-                sum += c_ptr[m];
-                y_ptr[b * output_dim + m] = sum;
+
+                // Apply Alpha
+                sum *= alpha;
+
+                // Apply Beta * C
+                if (c_data) {
+                    // C can be [M, N] or broadcasted [1, N] or [M, 1] or [1] or [N]
+                    // Simplifying assuming C is [M, N] or [N] (common bias)
+                    int64_t c_idx = 0;
+                    if (C->size() == M * N) {
+                        c_idx = m * N + n;
+                    } else if (C->size() == N) { // Standard Bias [N]
+                        c_idx = n;
+                    } else if (C->size() == 1) { // Scalar
+                        c_idx = 0;
+                    }
+                    
+                    sum += beta * c_data[c_idx];
+                }
+
+                y_data[m * N + n] = sum;
             }
         }
     }

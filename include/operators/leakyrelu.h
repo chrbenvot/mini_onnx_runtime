@@ -13,12 +13,7 @@ public:
         Tensor *output = outputs[0];
         output->reshape(input->shape());
         // Get alpha ( the slope for negative values,0.01 by default)
-        float alpha = 0.01f;
-        for (const auto &attr : node.attribute())
-        {
-            if (attr.name() == "alpha")
-                alpha = attr.f();
-        }
+        float alpha = get_float_attribute(node,"alpha",0.01f);
         const float *in_ptr = input->data<float>();
         float *out_ptr = output->data<float>();
         int64_t size = input->size();
