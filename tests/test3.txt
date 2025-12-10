@@ -1,0 +1,100 @@
+--- Tiny YOLO v2 Inference ---
+Engine ready. Tensors in Memory: 44
+Starting inference...
+Starting inference...
+ Running OpMul (Mul)
+[TIMER] Mul (Mul): 49.54 ms
+ Running OpAdd (Add)
+[TIMER] Add (Add): 48.167 ms
+ Running OpConv (convolution)
+[TIMER] Conv (convolution): 591.454 ms
+ Running OpBatchNormalization (batchnorm)
+[TIMER] BatchNormalization (batchnorm): 12.461 ms
+ Running OpLeakyRelu (activation)
+[TIMER] LeakyRelu (activation): 17.063 ms
+ Running OpMaxPool (pooling)
+[TIMER] MaxPool (pooling): 35.369 ms
+ Running OpConv (convolution1)
+[TIMER] Conv (convolution1): 1533.53 ms
+ Running OpBatchNormalization (batchnorm1)
+[TIMER] BatchNormalization (batchnorm1): 7.411 ms
+ Running OpLeakyRelu (activation1)
+[TIMER] LeakyRelu (activation1): 8.45 ms
+ Running OpMaxPool (pooling1)
+[TIMER] MaxPool (pooling1): 16.142 ms
+ Running OpConv (convolution2)
+[TIMER] Conv (convolution2): 1472.88 ms
+ Running OpBatchNormalization (batchnorm2)
+[TIMER] BatchNormalization (batchnorm2): 3.013 ms
+ Running OpLeakyRelu (activation2)
+[TIMER] LeakyRelu (activation2): 4.028 ms
+ Running OpMaxPool (pooling2)
+[TIMER] MaxPool (pooling2): 7.843 ms
+ Running OpConv (convolution3)
+[TIMER] Conv (convolution3): 1505.97 ms
+ Running OpBatchNormalization (batchnorm3)
+[TIMER] BatchNormalization (batchnorm3): 1.606 ms
+ Running OpLeakyRelu (activation3)
+[TIMER] LeakyRelu (activation3): 2.144 ms
+ Running OpMaxPool (pooling3)
+[TIMER] MaxPool (pooling3): 4.049 ms
+ Running OpConv (convolution4)
+[TIMER] Conv (convolution4): 1467.96 ms
+ Running OpBatchNormalization (batchnorm4)
+[TIMER] BatchNormalization (batchnorm4): 0.914 ms
+ Running OpLeakyRelu (activation4)
+[TIMER] LeakyRelu (activation4): 0.992 ms
+ Running OpMaxPool (pooling4)
+[TIMER] MaxPool (pooling4): 2.249 ms
+ Running OpConv (convolution5)
+[TIMER] Conv (convolution5): 1410.46 ms
+ Running OpBatchNormalization (batchnorm5)
+[TIMER] BatchNormalization (batchnorm5): 0.389 ms
+ Running OpLeakyRelu (activation5)
+[TIMER] LeakyRelu (activation5): 0.455 ms
+ Running OpMaxPool (pooling5)
+[TIMER] MaxPool (pooling5): 3.844 ms
+ Running OpConv (convolution6)
+[TIMER] Conv (convolution6): 5893.14 ms
+ Running OpBatchNormalization (batchnorm6)
+[TIMER] BatchNormalization (batchnorm6): 1.103 ms
+ Running OpLeakyRelu (activation6)
+[TIMER] LeakyRelu (activation6): 1.164 ms
+ Running OpConv (convolution7)
+[TIMER] Conv (convolution7): 12200.3 ms
+ Running OpBatchNormalization (batchnorm7)
+[TIMER] BatchNormalization (batchnorm7): 0.833 ms
+ Running OpLeakyRelu (activation7)
+[TIMER] LeakyRelu (activation7): 1.109 ms
+ Running OpConv (convolution8)
+[TIMER] Conv (convolution8): 193.774 ms
+Inference Complete.
+[TIMER] TOTAL INFERENCE: 26501 ms
+
+[Global Debug]
+Output Shape: [1, 125, 13, 13]
+Output Sum:   -6906.53
+
+=== Detections (Threshold > 0.3) ===
+!! FOUND OBJECT !! Grid(6,5) Conf: 0.710989
+!! FOUND OBJECT !! Grid(7,5) Conf: 0.922991
+!! FOUND OBJECT !! Grid(7,5) Conf: 0.34588
+!! FOUND OBJECT !! Grid(6,6) Conf: 0.580153
+!! FOUND OBJECT !! Grid(6,6) Conf: 0.381909
+!! FOUND OBJECT !! Grid(7,6) Conf: 0.968574
+!! FOUND OBJECT !! Grid(7,6) Conf: 0.796573
+!! FOUND OBJECT !! Grid(7,7) Conf: 0.980664
+!! FOUND OBJECT !! Grid(7,7) Conf: 0.649343
+!! FOUND OBJECT !! Grid(7,8) Conf: 0.873139
+
+[Max Objectness Search]
+Highest Confidence Found: 0.980664
+Location: Grid(7,7) Anchor 2
+
+[Raw Logits at Best Location]
+  Tx (Box X): 0.0685361
+  Ty (Box Y): 0.199102
+  Tw (Width): 0.421534
+  Th (Height): 0.00712402
+  To (Objectness): 3.92627 -> Sigmoid -> 0.980664
+  Class Scores (First 5): -2.27451 -2.991 1.70735 -1.14491 -3.56126 

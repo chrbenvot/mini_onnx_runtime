@@ -6,6 +6,16 @@ project(OnnxEngine)
 # 2. Set C++ Standard (We need C++17 for modern features)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#Enable SIMD / AVX Optimizations ---
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # -mavx2: Enable AVX2 instructions
+    # -mfma:  Enable Fused Multiply Add (faster dot products)
+    # -O3:    Maximum optimization level
+    add_compile_options(-mavx2 -mfma -O3)
+elseif(MSVC)
+    # Windows/Visual Studio flags
+    add_compile_options(/arch:AVX2 /O2)
+endif()
 
 # 3. Find External Libraries (Protobuf is required for ONNX)
 find_package(Protobuf REQUIRED)
