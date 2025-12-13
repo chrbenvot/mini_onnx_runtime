@@ -6,9 +6,13 @@ class GemmOp : public Operator
 {
 public:
     std::string get_op_type() const { return "Gemm"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node, std::vector<float> &workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
 
         const Tensor *A = inputs[0];
@@ -47,8 +51,8 @@ public:
 
                 float sum = 0.0f;
 
-                // --- OPTIMIZATION START ---
-                // We check for the "Happy Path":
+                // Optimization using SIMD
+                // We check for the best scenario ( contiguous A and B)
                 // 1. TransA=0: We read Row 'm' of A. (Contiguous if stride=1)
                 // 2. TransB=1: We read Row 'n' of raw B (which is Col 'n' of Transposed B). (Contiguous!)
 
@@ -70,7 +74,7 @@ public:
                         sum += a_data[a_idx] * b_data[b_idx];
                     }
                 }
-                // --- OPTIMIZATION END ---
+                
 
                 sum *= alpha;
 

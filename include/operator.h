@@ -4,13 +4,33 @@
 #include <iostream>
 #include "tensor.h"
 #include "onnx.pb.h"
+#include <cublas_v2.h>
+
+enum ExecutionMode
+{
+    CPU,
+    CUDA
+};
 
 // Abstract class for all Layers
 class Operator
 {
 public:
     virtual ~Operator() = default;
-    virtual void forward(const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs, const onnx::NodeProto &node, std::vector<float> &workspace) = 0;
+    virtual void forward_cpu(const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs, const onnx::NodeProto &node, std::vector<float> &workspace) = 0;
+    virtual void forward_gpu(const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs, const onnx::NodeProto &node, cublasHandle_t &cublas_handle)
+    {
+        std::cerr << "Error: Operator " << get_op_type() << " has no GPU implementation." << std::endl;
+        // Throw exception or fallback to CPU 
+        throw std::runtime_error("No GPU implementation");
+    }
+    void forward(ExecutionMode mode, const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs, const onnx::NodeProto &node, std::vector<float> &workspace, cublasHandle_t &handle)
+    {
+        if (mode == CPU)
+            forward_cpu(inputs, outputs, node, workspace);
+        else
+            forward_gpu(inputs, outputs, node,handle);
+    }
     virtual std::string get_op_type() const = 0;
 
 protected:

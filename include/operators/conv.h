@@ -10,9 +10,13 @@ class ConvOp : public Operator
 {
 public:
     std::string get_op_type() const { return "Conv"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node, std::vector<float> &workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
 
         const Tensor *X = inputs[0];
@@ -86,7 +90,7 @@ public:
 
         // Buffer: [N_gemm, K_gemm] (Transposed layout for SIMD)
         int64_t col_buffer_size = K_gemm * N_gemm;
-        // Optimization: Keep this vector static/thread-local to avoid allocs if you want,
+        // Optimization? Keep this vector static/thread-local to avoid allocs 
         // but for now local is safer.
         if (workspace.size() < col_buffer_size)
         {
@@ -104,7 +108,7 @@ public:
             const float *x_data = X->data<float>() + n * (C * H * width);
             float *y_out_ptr = y_data + n * (out_c * out_h * out_w);
 
-            // A. Perform im2col (Writing Transposed!)
+            // A. Perform im2col (Writing Transposed)
             im2col_transposed(x_data, C, H, width, kern_h, kern_w, pad_h, pad_w, stride_h, stride_w, out_h, out_w, col_buffer_ptr);
 
 // B. SIMD GEMM
@@ -119,7 +123,7 @@ public:
                 {
                     const float *col_row = col_buffer_ptr + i * K_gemm; // Contiguous Patch
 
-                    // --- AVX ACCELERATION ---
+                    //  AVX ACCELERATION 
                     // Dot product of two contiguous float arrays of length K_gemm
                     float val = dot_product_avx(w_row, col_row, K_gemm);
 
@@ -131,7 +135,7 @@ public:
 
 private:
     // Writes image patches into rows [PixelIndex, KernelIndex]
-    // This allows the GEMM inner loop to read contiguous memory.
+    // This allows the GEMM inner loop to read contiguous memory.(necessary for SIMD)
     void im2col_transposed(const float *data_im,
                            int channels, int height, int width,
                            int kernel_h, int kernel_w,

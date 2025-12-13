@@ -8,7 +8,11 @@ class AddOp : public Operator
 {
 public:
     std::string get_op_type() const { return "Add"; }
-    void forward(const std::vector<Tensor *> &inputs,
+    void forward_gpu(const std::vector<Tensor*>& inputs, 
+                 std::vector<Tensor*>& outputs, 
+                 const onnx::NodeProto& node, 
+                 cublasHandle_t& handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
                  const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
@@ -17,9 +21,9 @@ public:
         const Tensor *B = inputs[1];
         Tensor *Y = outputs[0];
 
-        // --- OPTIMIZATION: Fast Path for Element-Wise Add ---
-        // If shapes are identical, no broadcasting is needed.
-        // We can just blast through the arrays with AVX.
+        // Optimization: Check if the shapes are identical,which is often the case
+        // if so no complex broadcasting is needed and we can just use the SIMD helper function to add the tensors
+
         if (A->shape() == B->shape())
         {
             Y->reshape(A->shape());
@@ -28,7 +32,7 @@ public:
             const float *b_ptr = B->data<float>();
             float *y_ptr = Y->data<float>();
 
-            // Use the SIMD helper from simd_utils.h
+            // SIMD helper from simd_utils.h
             add_avx(a_ptr, b_ptr, y_ptr, A->size());
             return;
         }
@@ -62,7 +66,7 @@ public:
             out_shape[idx_out] = std::max(dim_a, dim_b);
             pad_shape_a[idx_out] = dim_a;
             pad_shape_b[idx_out] = dim_b;
-        }
+        } // eg: adding tensors of shape[1,2,3] and shape [2,3] would give a tensor of shape [1,2,3] through broadcasting
 
         Y->reshape(out_shape);
 
@@ -75,7 +79,7 @@ public:
         int64_t current_stride_a = 1;
         int64_t current_stride_b = 1;
 
-        for (int i = max_rank - 1; i >= 0; --i)
+        for (int i = max_rank - 1; i >= 0; --i) // almost same calculations for normal tensor strides 
         {
             strides_out[i] = current_stride_out;
 

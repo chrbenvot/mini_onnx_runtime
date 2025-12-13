@@ -8,9 +8,13 @@ class UpsampleOp : public Operator
 {
 public:
     std::string get_op_type() const { return "Resample"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node, std::vector<float> &workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
         const Tensor *X = inputs[0];
         Tensor *Y = outputs[0];
@@ -70,7 +74,7 @@ public:
         const float *x_data = X->data<float>();
         float *y_data = Y->data<float>();
 
-        // Pre-calculate inverse scales to replace division with multiplication (Optimization)
+        // Pre-calculate inverse scales to replace division with multiplication (Optimization cuz mult is faster in CPU)
         float inv_scale_h = 1.0f / scale_h;
         float inv_scale_w = 1.0f / scale_w;
 

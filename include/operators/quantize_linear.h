@@ -8,10 +8,14 @@ class QuantizeLinearOp : public Operator
 {
 public:
     std::string get_op_type() const { return "QuantizeLinear"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,
-                 std::vector<float> &workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     std::vector<float> &workspace) override
     {
 
         const Tensor *X = inputs[0]; // FLOAT
@@ -38,7 +42,7 @@ public:
         const float *x_data = X->data<float>();
         int64_t size = X->size();
 
-        // --- PROCESSING ---
+        // processing
         // Formula: y = clamp(round(x / scale) + zp)
 
         if (out_type == DataType::INT8)

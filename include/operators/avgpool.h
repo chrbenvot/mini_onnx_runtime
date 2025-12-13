@@ -8,9 +8,10 @@ class AvgPoolOp : public Operator
 {
 public:
     std::string get_op_type() const { return "AveragePool"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,std::vector<float>& workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs, std::vector<Tensor *> &outputs, const onnx::NodeProto &node, cublasHandle_t &cublas_handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
         const Tensor *X = inputs[0];
         Tensor *Y = outputs[0];
@@ -32,8 +33,8 @@ public:
         int64_t pad_w_end = (pads.size() >= 4) ? pads[3] : 0;
 
         // Parse logic flags
-        int64_t count_include_pad = get_int_attribute(node, "count_include_pad", 0);
-        int64_t ceil_mode = get_int_attribute(node, "ceil_mode", 0);
+        int64_t count_include_pad = get_int_attribute(node, "count_include_pad", 0); // Whether to include pad pixels when calculating values for the edges
+        int64_t ceil_mode = get_int_attribute(node, "ceil_mode", 0); // use ceiling or floor function to compute the output shape (C++ floors by default when casting floats to int)
 
         const auto &in_shape = X->shape();
         int64_t N = in_shape[0];
@@ -61,7 +62,7 @@ public:
 
         for (int n = 0; n < N; ++n)
         {
-            #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
             for (int c = 0; c < C; ++c)
             {
                 for (int oy = 0; oy < out_h; ++oy)

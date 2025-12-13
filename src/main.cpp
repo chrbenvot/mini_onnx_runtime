@@ -10,7 +10,7 @@
 #include "engine.h"
 #include "tensor.h"
 
-// --- YOLO CONFIGURATION ---
+//  YOLO CONFIGURATION 
 const int NUM_ANCHORS = 5;
 const int NUM_CLASSES = 20;
 const int BLOCK_SIZE = 5 + NUM_CLASSES; // 5 coords + 20 classes = 25 channels per anchor
@@ -30,7 +30,7 @@ float sigmoid(float x)
     return 1.0f / (1.0f + std::exp(-x));
 }
 
-// Helper: Softmax
+// Helper: Softmax (not used for current main but used in previous ones so may as well keep it)
 void softmax_array(float *start, int n)
 {
     float max_val = -1e9;
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     if (!load_input_file(input_path, input))
     {
         std::cerr << "Error: Could not load input file: " << input_path << std::endl;
-        // Fallback: Check parent directory if current fails (Legacy support)
+        // Fallback: Check parent directory if current fails (This is where i'll probably be more often cuz i rm the build folder frequently)
         std::string alt_path = "../" + input_path;
         if (load_input_file(alt_path, input))
         {
@@ -108,8 +108,26 @@ int main(int argc, char **argv)
     // 2. Run Engine
     try
     {
-        std::cout << "Starting inference..." << std::endl;
-        engine.run(input);
+        std::cout << "Warming up..." << std::endl;
+        for (int i = 0; i < 5; ++i)
+            engine.run(input); // Warmup
+
+        std::cout << "Benchmarking..." << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+
+        int iterations = 50;
+        for (int i = 0; i < iterations; ++i)
+        {
+            engine.run(input);
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        double duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+        std::cout << "Average Inference Time: " << duration / iterations << " ms" << std::endl;
+        std::cout << "FPS: " << 1000.0 / (duration / iterations) << std::endl;
+        /*std::cout << "Starting inference..." << std::endl;
+        engine.run(input);*/
     }
     catch (const std::exception &e)
     {
@@ -176,7 +194,7 @@ int main(int argc, char **argv)
                     // Extract coords...
                     int tx_idx = (channel_start + 0) * (grid_h * grid_w) + cy * grid_w + cx;
                     int ty_idx = (channel_start + 1) * (grid_h * grid_w) + cy * grid_w + cx;
-                    // ... (rest of your existing detection logic) ...
+                    // TODO: add rest of detection logic
 
                     // Simple print for now to ensure loop is working
                     detections++;

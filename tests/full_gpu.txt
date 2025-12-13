@@ -1,0 +1,98 @@
+--- Tiny YOLO v2 Inference ---
+Building Execution Plan...
+Plan built. Steps: 33
+Starting inference...
+Executing Plan...
+[TIMER] Mul (Mul): 1.483 ms
+[TIMER] Add (Add): 1.136 ms
+[DEBUG Conv Output] Head: -0.157079, -0.1797, -0.184526, -0.180676, -0.1833, -0.186834, -0.189465, -0.184789, -0.196149, -0.226968, 
+[TIMER] Conv (convolution): 10.561 ms
+[DEBUG BN Output] Head: 0.0678362, -0.22599, -0.288679, -0.238674, -0.272755, -0.318668, -0.352839, -0.292093, -0.439662, -0.839974, 
+[TIMER] BatchNormalization (batchnorm): 5.588 ms
+[TIMER] LeakyRelu (activation): 4.976 ms
+[DEBUG MaxPool Input X] Head: 0.0678362, -0.022599, -0.0288679, -0.0238674, -0.0272755, -0.0318668, -0.0352839, -0.0292093, -0.0439662, -0.0839974, 
+[DEBUG maxpool Output] Head: 0.449005, 0.403555, 0.547246, 0.552242, 0.485667, 0.238906, -0.0735746, 0.861989, 1.57022, 0.728598, 
+[TIMER] MaxPool (pooling): 1.482 ms
+[DEBUG Conv Output] Head: 3.053, -0.576114, 1.17367, 1.21575, 1.41308, 1.13653, 1.58885, 0.656823, 1.25361, 1.22119, 
+[TIMER] Conv (convolution1): 7.599 ms
+[DEBUG BN Output] Head: 1.0255, -1.65188, -0.360981, -0.329937, -0.184352, -0.388378, -0.05468, -0.742281, -0.302005, -0.32592, 
+[TIMER] BatchNormalization (batchnorm1): 2.926 ms
+[TIMER] LeakyRelu (activation1): 2.544 ms
+[DEBUG MaxPool Input X] Head: 1.0255, -0.165188, -0.0360981, -0.0329937, -0.0184352, -0.0388378, -0.005468, -0.0742281, -0.0302005, -0.032592, 
+[DEBUG maxpool Output] Head: 1.0255, -0.0329937, -0.0184352, -0.005468, -0.0302005, 0.177695, -0.0877396, -0.0758751, -0.04453, 0.00590443, 
+[TIMER] MaxPool (pooling1): 0.666 ms
+[DEBUG Conv Output] Head: -1.64965, -1.47645, 0.642462, 0.75006, -3.1039, -0.725883, -1.06853, -0.10462, -0.429794, -0.335896, 
+[TIMER] Conv (convolution2): 1.84 ms
+[DEBUG BN Output] Head: -2.3778, -2.05191, 1.93504, 2.13749, -5.11412, -0.639641, -1.28437, 0.529326, -0.0825197, 0.0941579, 
+[TIMER] BatchNormalization (batchnorm2): 1.401 ms
+[TIMER] LeakyRelu (activation2): 1.33 ms
+[DEBUG MaxPool Input X] Head: -0.23778, -0.205191, 1.93504, 2.13749, -0.511412, -0.0639641, -0.128437, 0.529326, -0.00825197, 0.0941579, 
+[DEBUG maxpool Output] Head: -0.205191, 2.13749, -0.0639641, 0.529326, 0.168109, -0.592007, -0.178115, -0.486159, -0.278593, -0.262849, 
+[TIMER] MaxPool (pooling2): 0.421 ms
+[DEBUG Conv Output] Head: -0.304558, -1.05128, -1.39203, -4.11126, -3.83063, -3.85779, -1.53495, -1.14502, -1.82938, -1.94752, 
+[TIMER] Conv (convolution3): 11.502 ms
+[DEBUG BN Output] Head: 0.292075, -0.59084, -0.993745, -4.20893, -3.87712, -3.90923, -1.16273, -0.701674, -1.51086, -1.65055, 
+[TIMER] BatchNormalization (batchnorm3): 0.821 ms
+[TIMER] LeakyRelu (activation3): 0.65 ms
+[DEBUG MaxPool Input X] Head: 0.292075, -0.059084, -0.0993745, -0.420893, -0.387712, -0.390923, -0.116273, -0.0701674, -0.151086, -0.165055, 
+[DEBUG maxpool Output] Head: 1.17089, -0.0993745, -0.387712, -0.0622874, -0.151086, -0.206991, -0.219501, -0.185694, 0.134186, -0.0767251, 
+[TIMER] MaxPool (pooling3): 0.238 ms
+[DEBUG Conv Output] Head: -0.406546, -1.16761, -0.848989, -1.09476, -1.85809, -1.17821, -0.363973, -0.278999, -1.41395, -1.23592, 
+[TIMER] Conv (convolution4): 0.625 ms
+[DEBUG BN Output] Head: -1.082, -2.43078, -1.86611, -2.30167, -3.65445, -2.44956, -1.00655, -0.855959, -2.86734, -2.55183, 
+[TIMER] BatchNormalization (batchnorm4): 0.326 ms
+[TIMER] LeakyRelu (activation4): 0.366 ms
+[DEBUG MaxPool Input X] Head: -0.1082, -0.243078, -0.186611, -0.230167, -0.365445, -0.244956, -0.100655, -0.0855959, -0.286734, -0.255183, 
+[DEBUG maxpool Output] Head: -0.1082, -0.186611, -0.244956, -0.0855959, -0.216584, -0.16393, -0.16086, -0.156838, 0.699788, -0.241758, 
+[TIMER] MaxPool (pooling4): 0.151 ms
+[DEBUG Conv Output] Head: -0.583673, -1.06866, -0.696285, 0.892354, -0.962503, -1.26077, -0.836256, -0.229487, -0.462608, -0.819419, 
+[TIMER] Conv (convolution5): 0.527 ms
+[DEBUG BN Output] Head: -2.92463, -3.77932, -3.12309, -0.323433, -3.59224, -4.11788, -3.36976, -2.30045, -2.71128, -3.34009, 
+[TIMER] BatchNormalization (batchnorm5): 0.176 ms
+[TIMER] LeakyRelu (activation5): 0.155 ms
+[DEBUG MaxPool Input X] Head: -0.292463, -0.377932, -0.312309, -0.0323433, -0.359224, -0.411788, -0.336976, -0.230045, -0.271128, -0.334009, 
+[DEBUG maxpool Output] Head: -0.203266, -0.0390619, -0.0323433, -0.0323433, -0.359224, -0.225141, -0.225141, -0.230045, -0.271128, -0.25702, 
+[TIMER] MaxPool (pooling5): 0.226 ms
+[DEBUG Conv Output] Head: -0.0197882, -0.0006974, 0.138525, -0.428376, -0.777057, -0.446697, 0.0922251, 0.190638, 0.179996, 0.142897, 
+[TIMER] Conv (convolution6): 1.165 ms
+[DEBUG BN Output] Head: -4.46814, -4.29812, -3.05815, -8.10717, -11.2127, -8.27035, -3.47052, -2.59401, -2.68879, -3.01921, 
+[TIMER] BatchNormalization (batchnorm6): 0.331 ms
+[TIMER] LeakyRelu (activation6): 0.35 ms
+[DEBUG Conv Output] Head: 0.0983921, -0.1297, -1.57009, 0.217628, 0.260023, -0.559115, 0.656453, 0.970689, 1.70356, 1.64187, 
+[TIMER] Conv (convolution7): 1.993 ms
+[DEBUG BN Output] Head: 0.579881, 0.462009, -0.282345, 0.641499, 0.663407, 0.240099, 0.868272, 1.03066, 1.40939, 1.37751, 
+[TIMER] BatchNormalization (batchnorm7): 0.339 ms
+[TIMER] LeakyRelu (activation7): 0.307 ms
+[DEBUG Conv Output] Head: -0.30886, 0.24185, 0.395606, -0.250714, -0.192492, 0.165104, 0.337167, 0.205959, -0.255673, -0.259591, 
+[TIMER] Conv (convolution8): 0.137 ms
+Inference Complete.
+[TIMER] TOTAL INFERENCE: 76.162 ms
+Graphviz DOT file written to model_graph.dot
+
+[Global Debug]
+Output Shape: [1, 125, 13, 13]
+Output Sum:   -6679.69
+
+=== Detections (Threshold > 0.3) ===
+!! FOUND OBJECT !! Grid(6,5) Conf: 0.761392
+!! FOUND OBJECT !! Grid(7,5) Conf: 0.939565
+!! FOUND OBJECT !! Grid(7,5) Conf: 0.391791
+!! FOUND OBJECT !! Grid(6,6) Conf: 0.641884
+!! FOUND OBJECT !! Grid(6,6) Conf: 0.429463
+!! FOUND OBJECT !! Grid(7,6) Conf: 0.975597
+!! FOUND OBJECT !! Grid(7,6) Conf: 0.826699
+!! FOUND OBJECT !! Grid(7,7) Conf: 0.985027
+!! FOUND OBJECT !! Grid(7,7) Conf: 0.692866
+!! FOUND OBJECT !! Grid(7,8) Conf: 0.899272
+
+[Max Objectness Search]
+Highest Confidence Found: 0.985027
+Location: Grid(7,7) Anchor 2
+
+[Raw Logits at Best Location]
+  Tx (Box X): 0.0649436
+  Ty (Box Y): 0.210573
+  Tw (Width): 0.470912
+  Th (Height): 0.0439592
+  To (Objectness): 4.18641 -> Sigmoid -> 0.985027
+  Class Scores (First 5): -2.26544 -2.98702 1.71191 -1.14286 -3.55954 

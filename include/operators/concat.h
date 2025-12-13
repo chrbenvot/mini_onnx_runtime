@@ -5,9 +5,13 @@ class ConcatOp : public Operator
 {
 public:
     std::string get_op_type() const { return "Concat"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,std::vector<float>& workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
         // On which axis are we trying to concat?
         int64_t axis = get_int_attribute(node, "axis", 1); // we'll concat on batch by default
@@ -44,7 +48,7 @@ public:
             for (const Tensor *input : inputs)
             {
                 const float *x_ptr = input->data<float>();
-                int64_t axis_dim = input->shape()[axis];  // How big is this tensor along the concat axis?
+                int64_t axis_dim = input->shape()[axis];   // How big is this tensor along the concat axis?
                 int64_t copy_size = axis_dim * inner_size; // How much data we'll be copying
 
                 // Calculate offset from the source

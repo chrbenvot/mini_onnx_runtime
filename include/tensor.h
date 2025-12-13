@@ -273,7 +273,7 @@ public:
             CUDA_CHECK(cudaMemcpy(m_buffer.data(), m_device_ptr, m_buffer.size(), cudaMemcpyDeviceToHost));
     }
     void *device_data() const { return m_device_ptr; }
-    bool is_on_device() const { return m_on_device; }
+    bool is_on_device() const { return m_device_ptr != nullptr; }
 
 private:
     std::string m_name;

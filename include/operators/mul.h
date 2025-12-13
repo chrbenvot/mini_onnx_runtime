@@ -7,7 +7,11 @@ class MulOp : public Operator
 {
 public:
     std::string get_op_type() const { return "Mul"; }
-    void forward(const std::vector<Tensor *> &inputs,
+    void forward_gpu(const std::vector<Tensor*>& inputs, 
+                 std::vector<Tensor*>& outputs, 
+                 const onnx::NodeProto& node, 
+                 cublasHandle_t& handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
                  std::vector<Tensor *> &outputs,
                  const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
@@ -15,7 +19,7 @@ public:
         const Tensor *A = inputs[0];
         const Tensor *B = inputs[1];
         Tensor *Y = outputs[0];
-        // Fast Path with SIMD
+        // Fast Path with SIMD, no braodcasting needed
         if (A->shape() == B->shape())
         {
             Y->reshape(A->shape());

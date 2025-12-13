@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include "onnx.pb.h"
-#include "tensor.h" // <--- Now we need to create Tensors
+#include "tensor.h" //  Now we need to create Tensors
 
 class ModelLoader
 {
@@ -30,7 +30,7 @@ public:
 
         m_graph = m_model.graph();
 
-        // NEW: Immediately parse all weights into our map
+        // Immediately parse all weights into our map
         load_initializers();
 
         return true;
@@ -64,9 +64,9 @@ public:
 private:
     onnx::ModelProto m_model;
     onnx::GraphProto m_graph;
-    std::map<std::string, Tensor> m_weights; // <--- The Registry
+    std::map<std::string, Tensor> m_weights; // The Registry
 
-    // The Logic to convert ONNX Proto -> Your Tensor Class
+    // The Logic to convert ONNX Proto -> Tensor Class
     void load_initializers()
     {
         for (const auto &initializer : m_graph.initializer())

@@ -8,6 +8,7 @@
 #include "model_loader.h"
 #include "timer.h"
 #include "op_factory.h"
+#include <cublas_v2.h>
 
 // The "Instruction" for a single layer
 struct ExecutionStep
@@ -22,11 +23,15 @@ struct ExecutionStep
 class InferenceEngine
 {
 public:
-    InferenceEngine() = default;
+    InferenceEngine()
+    {
+        cublasCreate(&m_cublas_handle);
+    }
 
     ~InferenceEngine()
     {
-        // Now we own the operators stored in the plan
+        cublasDestroy(m_cublas_handle);
+        // we own the operators stored in the plan so we need to handle clean up
         for (auto &step : m_execution_plan)
         {
             delete step.op;
@@ -106,9 +111,52 @@ public:
         // 2. Execute (Fast Loop)
         for (auto &step : m_execution_plan)
         {
+            std::string type = step.op->get_op_type();
+            if (type == "Conv" || type == "Gemm" || type == "Relu" || type == "BatchNormalization" || type == "LeakyRelu" || type == "MaxPool" || type == "Mul" || type == "Add")
+                m_mode = CUDA;
+            else
+                m_mode = CPU;
+            if (m_mode == CUDA)
+            {
+                // We are about to run on GPU. Ensure all inputs are in VRAM.
+                for (Tensor *input : step.inputs)
+                {
+                    if (!input->is_on_device())
+                    {
+                        input->allocate_device_memory();
+                        input->copy_to_device(); // RAM -> VRAM
+                    }
+                }
+            }
+            else
+            {
+                // We are about to run on CPU. Ensure all inputs are in RAM.
+                for (Tensor *input : step.inputs)
+                {
+                    if (input->is_on_device())
+                    {
+                        input->copy_to_host(); // VRAM -> RAM 
+                        // Optional: free device memory to save space,
+                        // but keeping it is faster if needed again.
+                    }
+                }
+            }
             {
                 ScopedTimer layer_timer(step.debug_name);
-                step.op->forward(step.inputs, step.outputs, *step.node, m_workspace);
+                //
+                step.op->forward(m_mode, step.inputs, step.outputs, *step.node, m_workspace, m_cublas_handle);
+            }
+        }
+        for (const auto &output_node : m_graph.output())
+        {
+            std::string name = output_node.name();
+            if (m_tensor_registry.count(name))
+            {
+                Tensor &out = m_tensor_registry[name];
+                if (out.is_on_device())
+                {
+                    out.copy_to_host(); // Force VRAM -> RAM sync
+                }
             }
         }
         std::cout << "Inference Complete." << std::endl;
@@ -184,10 +232,12 @@ public:
         file.close();
         std::cout << "Graphviz DOT file written to " << filename << std::endl;
     }
+    ExecutionMode m_mode = CPU; // TODO: add proper execution switching probably
 
 private:
     onnx::GraphProto m_graph;
     std::map<std::string, Tensor> m_tensor_registry;
     std::vector<ExecutionStep> m_execution_plan; // The list of instructions
     std::vector<float> m_workspace;
+    cublasHandle_t m_cublas_handle;
 };

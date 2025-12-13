@@ -7,10 +7,14 @@ class DequantizeLinearOp : public Operator
 {
 public:
     std::string get_op_type() const { return "DequantizeLinear"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,
-                 std::vector<float> &workspace) override
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     std::vector<float> &workspace) override
     {
 
         // Input 0: X (INT8 or UINT8)
@@ -45,7 +49,7 @@ public:
         float *y_data = Y->data<float>();
         int64_t size = X->size();
 
-        // --- PROCESSING ---
+        // Processing
         if (X->dtype() == DataType::INT8)
         {
             const int8_t *x_data = X->data<int8_t>();

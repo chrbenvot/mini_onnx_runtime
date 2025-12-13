@@ -5,10 +5,14 @@
 class SigmoidOp : public Operator
 {
 public:
-std::string get_op_type() const { return "Sigmoid"; }
-    void forward(const std::vector<Tensor *> &inputs,
-                 std::vector<Tensor *> &outputs,
-                 const onnx::NodeProto &node,std::vector<float>& workspace) override
+    std::string get_op_type() const { return "Sigmoid"; }
+    void forward_gpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node,
+                     cublasHandle_t &handle) override;
+    void forward_cpu(const std::vector<Tensor *> &inputs,
+                     std::vector<Tensor *> &outputs,
+                     const onnx::NodeProto &node, std::vector<float> &workspace) override
     {
         Tensor *input = inputs[0];
         Tensor *output = outputs[0];
@@ -18,7 +22,7 @@ std::string get_op_type() const { return "Sigmoid"; }
         float *out_ptr = output->data<float>();
         int64_t size = input->size();
 
-        #pragma omp parallel for if(size > 4096)
+#pragma omp parallel for if (size > 4096)
         for (int i = 0; i < size; ++i)
         {
             float val = in_ptr[i];
