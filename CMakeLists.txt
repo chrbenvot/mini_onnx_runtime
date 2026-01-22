@@ -26,6 +26,9 @@ add_compile_options($<$<COMPILE_LANGUAGE:CUDA>:-rdc=true>) # Enable relocatable 
 find_package(Protobuf REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(CUDAToolkit REQUIRED COMPONENTS cublas)
+find_package(OpenCV REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
 
 # -----------------------------
 # 4. Include directories
@@ -114,3 +117,36 @@ target_link_libraries(test_cuda_gemm
 )
     
 target_include_directories(test_cuda_gemm PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+
+
+# --- ImGui Sources ---
+# We need the core files AND the backends for GLFW/OpenGL3
+set(IMGUI_DIR "third_party/imgui")
+set(IMGUI_SOURCES
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+# --- The GUI Executable ---
+add_executable(gui_app src/main_gui.cpp ${IMGUI_SOURCES})
+
+# Include directories
+target_include_directories(gui_app PRIVATE 
+    include 
+    ${IMGUI_DIR} 
+    ${IMGUI_DIR}/backends
+    ${OpenCV_INCLUDE_DIRS}
+)
+
+# Link libraries
+target_link_libraries(gui_app PRIVATE 
+    ${OpenCV_LIBS} 
+    glfw 
+    OpenGL::GL
+)
