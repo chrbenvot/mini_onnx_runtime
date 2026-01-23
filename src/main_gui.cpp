@@ -91,6 +91,7 @@ struct Detection
     float confidence;
     int class_id;
     std::string label;
+    int timer = 0;
 };
 
 // --- MATH HELPERS ---
@@ -235,6 +236,9 @@ int main(int, char **)
 
     GLTexture webcam_tex;
     cv::Mat frame, rgb_frame;
+    // This vector remembers boxes from previous frames
+    std::vector<Detection> persistent_boxes;
+    const int BOX_LIFETIME = 15; // How many frames a box lingers (approx 0.5 seconds at 30FPS)
 
     // --- Main Loop ---
     while (!glfwWindowShouldClose(window))
@@ -291,30 +295,82 @@ int main(int, char **)
 
         {
             ImGui::Begin("YOLO Dashboard");
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Max Raw Signal: %.4f", max_conf);
 
             // --- CONTROLS ---
-            static float threshold = 0.30f;
+            static float threshold = 0.20f; // Lower default threshold since we have smoothing now
             ImGui::SliderFloat("Confidence", &threshold, 0.01f, 1.0f);
-            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
-            // --- DRAW IMAGE & BOXES ---
+            // --- DRAW IMAGE ---
             ImVec2 pos = ImGui::GetCursorScreenPos();
-
-            // 1. Draw Image
             if (webcam_tex.id != 0)
                 ImGui::Image((void *)(intptr_t)webcam_tex.id, ImVec2(640, 480));
 
-            // 2. Decode Real Output using the slider threshold
-            std::vector<Detection> detections = decode_output(out_data, threshold);
+            // --- STABILIZER LOGIC START ---
 
-            // 3. Draw Boxes
+            // 1. Get Fresh Detections from AI
+            std::vector<Detection> fresh_detections = decode_output(out_data, threshold);
+
+            // 2. Age the Old Boxes (Decrease Timer)
+            for (auto &box : persistent_boxes)
+            {
+                box.timer--;
+            }
+
+            // 3. Merge Fresh Detections into Persistent Boxes
+            for (const auto &new_det : fresh_detections)
+            {
+                bool matched = false;
+
+                // Try to find a matching box in our history
+                for (auto &old_box : persistent_boxes)
+                {
+                    // If IoU > 0.3, assume it's the same object
+                    if (iou(new_det, old_box) > 0.3f && new_det.class_id == old_box.class_id)
+                    {
+                        // UPDATE the old box with new coordinates
+                        old_box.x = new_det.x;
+                        old_box.y = new_det.y;
+                        old_box.w = new_det.w;
+                        old_box.h = new_det.h;
+                        old_box.confidence = new_det.confidence;
+                        old_box.timer = BOX_LIFETIME; // RESET Timer (It lives!)
+                        matched = true;
+                        break;
+                    }
+                }
+
+                // If no match found, this is a brand new object
+                if (!matched)
+                {
+                    Detection det = new_det;
+                    det.timer = BOX_LIFETIME; // Give it full life
+                    persistent_boxes.push_back(det);
+                }
+            }
+
+            // 4. Remove Dead Boxes (Timer <= 0)
+            // This idiom efficiently deletes items from a vector
+            persistent_boxes.erase(
+                std::remove_if(persistent_boxes.begin(), persistent_boxes.end(),
+                               [](const Detection &d)
+                               { return d.timer <= 0; }),
+                persistent_boxes.end());
+
+            // --- STABILIZER LOGIC END ---
+
+            // 5. Draw the PERSISTENT boxes (not the fresh ones)
             ImDrawList *draw_list = ImGui::GetWindowDrawList();
             float img_w = 640.0f;
             float img_h = 480.0f;
 
-            for (const auto &det : detections)
+            for (const auto &det : persistent_boxes)
             {
+                // Fade out color as timer runs out
+                float alpha = (float)det.timer / BOX_LIFETIME;
+                ImU32 color = IM_COL32(0, 255, 0, (int)(255 * alpha));
+                ImU32 text_bg = IM_COL32(0, 0, 0, (int)(200 * alpha));
+                ImU32 text_col = IM_COL32(255, 255, 255, (int)(255 * alpha));
+
                 float center_x = pos.x + det.x * img_w;
                 float center_y = pos.y + det.y * img_h;
                 float width = det.w * img_w;
@@ -325,16 +381,14 @@ int main(int, char **)
                 float right = center_x + width / 2.0f;
                 float bottom = center_y + height / 2.0f;
 
-                // Draw Box
-                draw_list->AddRect(ImVec2(left, top), ImVec2(right, bottom), IM_COL32(0, 255, 0, 255), 3.0f);
+                draw_list->AddRect(ImVec2(left, top), ImVec2(right, bottom), color, 3.0f);
 
-                // Draw Label
                 char label_buf[32];
                 sprintf(label_buf, "%s %.2f", det.label.c_str(), det.confidence);
-                draw_list->AddText(ImVec2(left, top - 20), IM_COL32(0, 255, 0, 255), label_buf);
+                draw_list->AddText(ImVec2(left, top - 20), text_col, label_buf);
             }
 
-            ImGui::Text("Detections: %lu", detections.size());
+            ImGui::Text("Active Objects: %lu", persistent_boxes.size());
             ImGui::End();
         }
 
