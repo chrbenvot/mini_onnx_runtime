@@ -134,7 +134,8 @@ set(IMGUI_SOURCES
 )
 
 # --- The GUI Executable ---
-add_executable(gui_app src/main_gui.cpp ${IMGUI_SOURCES})
+add_executable(gui_app src/main_gui.cpp ${IMGUI_SOURCES}
+    ${OPERATOR_CU_FILES})
 
 # Include directories
 target_include_directories(gui_app PRIVATE 
@@ -142,11 +143,15 @@ target_include_directories(gui_app PRIVATE
     ${IMGUI_DIR} 
     ${IMGUI_DIR}/backends
     ${OpenCV_INCLUDE_DIRS}
+    "third_party/onnx"
 )
 
 # Link libraries
 target_link_libraries(gui_app PRIVATE 
+    onnx_proto
     ${OpenCV_LIBS} 
     glfw 
     OpenGL::GL
+    CUDA::cublas
+    CUDA::cudart
 )
