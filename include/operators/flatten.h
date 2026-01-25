@@ -48,7 +48,7 @@ public:
         }
 
         // Copy Data & Reshape
-        // Since we don't have "View" semantics (shared memory) yet,
+        // Since we don't have "View" semantics (shared memory) yet, (oops we never managed to add this)
         // we must copy the data to the output tensor.
         // OPTIONAL: share the pointer? View semantics
         *output = *input;

@@ -43,4 +43,4 @@ public:
         if (type == "DeuantizeLinear") return new DequantizeLinearOp();
         return nullptr;
     }
-};
+}; // I feel like there's a better way to do this lul

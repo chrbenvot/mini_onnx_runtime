@@ -22,7 +22,7 @@ void ReluOp::forward_gpu(const std::vector<Tensor*>& inputs,
     // 1. Reshape Output (Syncs CPU shape)
     output->reshape(input->shape());
 
-    // 2. ALLOCATE GPU MEMORY (The Missing Step!)
+    // 2. ALLOCATE GPU MEMORY 
     if (output->is_on_device()) output->free_device_memory();
     output->allocate_device_memory();
 

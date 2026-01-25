@@ -85,13 +85,12 @@ void test_relu()
 
     Tensor output(DataType::FLOAT32, {4});
 
-    // NEW: Workspace buffer
     std::vector<float> workspace;
     TestHandle handle;
     input.allocate_device_memory();
     input.copy_to_device(); // Host -> Device
 
-    // 3. Prepare Output on GPU
+    // Prepare output on GPU
     output.allocate_device_memory();
     ReluOp op;
     std::vector<Tensor *> inputs = {&input};
@@ -177,7 +176,7 @@ void test_conv_simple()
     input.allocate_device_memory();
     input.copy_to_device(); // Host -> Device
 
-    // 3. Prepare Output on GPU
+    // Prepare Output on GPU
     weight.allocate_device_memory();
     weight.copy_to_device();
     ConvOp op;
@@ -228,14 +227,14 @@ void test_concat_upsample()
 
     UpsampleOp resize_op;
     Tensor upsampled_out(DataType::FLOAT32, {});
-    std::vector<float> workspace; // NEW
+    std::vector<float> workspace; 
     TestHandle handle;
 
     std::vector<Tensor *> up_inputs = {&input, &roi, &scales};
     std::vector<Tensor *> up_outputs = {&upsampled_out};
     onnx::NodeProto resize_node;
 
-    resize_op.forward(CPU, up_inputs, up_outputs, resize_node, workspace, handle); // Added workspace
+    resize_op.forward(CPU, up_inputs, up_outputs, resize_node, workspace, handle); 
 
     assert(upsampled_out.shape()[2] == 4);
     assert(upsampled_out.shape()[3] == 4);
@@ -251,8 +250,7 @@ void test_concat_upsample()
     axis_attr->set_name("axis");
     axis_attr->set_i(1);
 
-    concat_op.forward(CPU, cat_inputs, cat_outputs, concat_node, workspace, handle); // Added workspace
-
+    concat_op.forward(CPU, cat_inputs, cat_outputs, concat_node, workspace, handle);
     assert(concat_out.shape()[0] == 1);
     assert(concat_out.shape()[1] == 2);
     assert(concat_out.shape()[2] == 4);

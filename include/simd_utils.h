@@ -37,7 +37,7 @@ inline float dot_product_avx(const float *a, const float *b, int64_t n)
     return total;
 }
 
-// --- Parallelized Element-wise Add ---
+// Parallelized Element-wise Add 
 inline void add_avx(const float *a, const float *b, float *out, int64_t n)
 {
     #pragma omp parallel for if (n > 4096)
@@ -55,7 +55,7 @@ inline void add_avx(const float *a, const float *b, float *out, int64_t n)
         out[i] = a[i] + b[i];
 }
 
-// --- Parallelized Element-wise Mul ---
+//  Parallelized Element-wise Mul 
 inline void mul_avx(const float *a, const float *b, float *out, int64_t n)
 {
     #pragma omp parallel for if (n > 4096)
@@ -72,7 +72,7 @@ inline void mul_avx(const float *a, const float *b, float *out, int64_t n)
         out[i] = a[i] * b[i];
 }
 
-// --- Parallelized Leaky Relu ---
+//  Parallelized Leaky Relu 
 inline void leaky_relu_avx(const float *in, float *out, int64_t n, float alpha)
 {
     __m256 v_alpha = _mm256_set1_ps(alpha);
@@ -96,7 +96,7 @@ inline void leaky_relu_avx(const float *in, float *out, int64_t n, float alpha)
     }
 }
 
-// --- Parallelized Standard ReLU ---
+//  Parallelized Standard ReLU 
 inline void relu_avx(const float *in, float *out, int64_t n)
 {
     __m256 v_zero = _mm256_setzero_ps(); 
@@ -116,7 +116,7 @@ inline void relu_avx(const float *in, float *out, int64_t n)
     }
 }
 
-// --- Parallelized Scale and Shift (BatchNormalization) ---
+//  Parallelized Scale and Shift (BatchNormalization) 
 inline void scale_shift_avx(const float *in, float *out, int64_t n, float scale, float bias)
 {
     __m256 v_scale = _mm256_set1_ps(scale);

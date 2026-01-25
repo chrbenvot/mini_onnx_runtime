@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "model_loader.h"
 
-// --- PREPROCESSING (Same as voc_eval) ---
+// --- PREPROCESSING ---
 struct LetterboxInfo {
     float scale;
     int x_offset;
@@ -21,24 +21,24 @@ std::vector<float> preprocess_letterbox(const cv::Mat& src) {
     int target_w = 416;
     int target_h = 416;
 
-    // 1. Calculate Scale
+    // Calculate Scale
     float scale = std::min((float)target_w / src.cols, (float)target_h / src.rows);
     int new_w = (int)(src.cols * scale);
     int new_h = (int)(src.rows * scale);
 
-    // 2. Resize
+    //  Resize
     cv::Mat resized;
     cv::resize(src, resized, cv::Size(new_w, new_h));
 
-    // 3. Gray Canvas
+    // Gray Canvas
     cv::Mat canvas(target_h, target_w, CV_8UC3, cv::Scalar(128, 128, 128));
 
-    // 4. Center Paste
+    // Center Paste
     int x_offset = (target_w - new_w) / 2;
     int y_offset = (target_h - new_h) / 2;
     resized.copyTo(canvas(cv::Rect(x_offset, y_offset, new_w, new_h)));
 
-    // 5. Convert
+    // Convert
     cv::cvtColor(canvas, canvas, cv::COLOR_BGR2RGB);
 
     std::vector<float> output;
@@ -49,7 +49,7 @@ std::vector<float> preprocess_letterbox(const cv::Mat& src) {
     for (int c = 0; c < 3; ++c) {
         for (int y = 0; y < 416; ++y) {
             for (int x = 0; x < 416; ++x) {
-                // Keep 0-255 range to match your current setup
+                // Keep 0-255 range to match our current setup
                 output.push_back(static_cast<float>(channels[c].at<uint8_t>(y, x))); 
             }
         }
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // 1. Load Engine
+    //  Load Engine
     ModelLoader loader;
     if (!loader.load(argv[1])) {
         std::cerr << "Failed to load model." << std::endl;
@@ -72,14 +72,14 @@ int main(int argc, char** argv) {
     InferenceEngine engine;
     engine.load_model(loader);
 
-    // 2. Load Image
+    //  Load Image
     cv::Mat img = cv::imread(argv[2]);
     if (img.empty()) {
         std::cerr << "Failed to load image." << std::endl;
         return 1;
     }
 
-    // 3. Run Inference
+    //  Run Inference
     std::vector<float> input_data = preprocess_letterbox(img);
     std::vector<int64_t> input_shape = {1, 3, 416, 416};
     Tensor input_tensor(DataType::FLOAT32, input_shape, "input");
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     std::cout << "Running Inference..." << std::endl;
     engine.run(input_tensor);
 
-    // 4. Print Debug Stats (Matching Python)
+    // Print Debug Stats (To see if they're Matching Python)
     Tensor& output = engine.get_output();
     const float* out_data = output.data<float>();
     size_t count = output.size();

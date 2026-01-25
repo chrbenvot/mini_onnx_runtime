@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     // 2. Run Engine
     try
     {
-        std::cout << "Warming up..." << std::endl;
+        std::cout << "Warming up..." << std::endl; // This is mostly debug/internal stuff
         for (int i = 0; i < 5; ++i)
             engine.run(input); // Warmup
 
@@ -215,9 +215,6 @@ int main(int argc, char **argv)
     if (best_idx_base != -1)
     {
         // Re-calculate indices for the best block to show raw logits
-        // Note: The memory layout is confusing.
-        // We know 'best_idx_base' calculated above is actually pointing to WRONG place
-        // because channel stride is (H*W). Let's recalculate cleanly.
 
         int offset = (grid_h * grid_w);
         int base_channel = best_anchor * BLOCK_SIZE;

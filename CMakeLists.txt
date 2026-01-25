@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)  # >=3.18 for CUDA targets support
+cmake_minimum_required(VERSION 3.18)  
 
 project(OnnxEngine LANGUAGES CXX CUDA)
 
@@ -61,8 +61,9 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 --expt-relaxed-constexpr")
 
 # Automatically collect all .cu files in src/operators
 file(GLOB_RECURSE OPERATOR_CU_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/operators/*.cu")
+
 # -----------------------------
-# 7. Engine target
+# Engine target
 # -----------------------------
 add_executable(engine
     src/main.cpp
@@ -83,7 +84,7 @@ target_link_libraries(engine
 
 target_include_directories(engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # -----------------------------
-# 8. Unit test target
+# Unit test target
 # -----------------------------
 add_executable(test_tensor
     tests/test_tensor.cpp ${OPERATOR_CU_FILES}
@@ -102,11 +103,11 @@ target_include_directories(test_tensor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inclu
 add_executable(test_cuda tests/test_cuda.cpp ${OPERATOR_CU_FILES})
 
 # CRITICAL: Tell CMake to use the CUDA compiler and link necessary libs
-# We also need to include your custom headers and the CUDA headers
+# We also need to include custom headers and the CUDA headers
 target_link_libraries(test_cuda onnx_proto  CUDA::cudart CUDA::cublas)
 target_include_directories(test_cuda PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# cue gemm test target
+# cuda gemm test target
 add_executable(test_cuda_gemm tests/test_cuda_gemm.cpp src/operators/gemm.cu ${ONNX_PROTO_SRCS})
     
 # Link CUDA Runtime and cuBLAS

@@ -11,10 +11,10 @@
 void test_simple_gemm() {
     std::cout << "--- Testing GEMM on GPU (cuBLAS) ---" << std::endl;
 
-    // 1. Initialize Engine (Creating cuBLAS Handle)
+    // Initialize Engine (Creating cuBLAS Handle)
     InferenceEngine engine; 
 
-    // 2. Prepare Data (A * B = Y)
+    //  Prepare Data (A * B = Y)
     // Matrix A (2x2): [[1, 2], [3, 4]]
     Tensor A(DataType::FLOAT32, {2, 2});
     float* a_ptr = A.data<float>();
@@ -30,13 +30,13 @@ void test_simple_gemm() {
     // Output Y
     Tensor Y(DataType::FLOAT32, {2, 2});
 
-    // 3. Move to GPU
+    //  Move to GPU
     std::cout << "  Moving data to GPU..." << std::endl;
     A.allocate_device_memory(); A.copy_to_device();
     B.allocate_device_memory(); B.copy_to_device();
     Y.allocate_device_memory(); // Allocate output space
 
-    // 4. Run Operator
+    //  Run Operator
     std::cout << "  Running cuBLAS GEMM..." << std::endl;
     GemmOp op;
     std::vector<Tensor*> inputs = {&A, &B};
@@ -46,7 +46,6 @@ void test_simple_gemm() {
     // We need to manually access the handle from the engine for this raw test
     // Friend classes or a getter would be cleaner, but for testing we can cheat 
     // OR just create a local handle if we can't access private members.
-    // Ideally: engine.run_operator_gpu(&op, inputs, outputs, node);
     
     // For this test script ONLY, let's make a local handle to verify the OP logic
     cublasHandle_t handle;
@@ -56,11 +55,11 @@ void test_simple_gemm() {
     
     cudaDeviceSynchronize();
 
-    // 5. Read Back
+    //  Read Back
     std::cout << "  Reading result..." << std::endl;
     Y.copy_to_host();
 
-    // 6. Verify: A * I = A
+    //  Verify: A * I = A
     // [[1, 2], [3, 4]]
     float* y_ptr = Y.data<float>();
     std::cout << "  Result: [" << y_ptr[0] << ", " << y_ptr[1] << "]" << std::endl;

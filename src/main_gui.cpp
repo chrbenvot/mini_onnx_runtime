@@ -191,8 +191,6 @@ cv::Mat visualize_tensor(Tensor *tensor, int channel_idx = 0)
         return cv::Mat();
 
     // 1. Get Data (Handle GPU memory if necessary)
-    // Note: If you optimized memory to reuse buffers, this might show garbage.
-    // But for a basic engine, the data persists.
     std::vector<float> cpu_data;
     const float *data_ptr = nullptr;
 
@@ -262,7 +260,7 @@ void draw_model_graph(InferenceEngine &engine)
 {
     ImGui::Begin("Model Architecture");
 
-    // 1. Get the ORDERED execution plan
+    // 1. Get the ORDERED execution plan ( this is why the engine needs a getter for it)
     const auto &plan = engine.get_execution_plan();
 
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
@@ -292,7 +290,7 @@ void draw_model_graph(InferenceEngine &engine)
                 IM_COL32(255, 255, 255, 100), 2.0f);
         }
 
-        // B. Color Code based on Operation Type
+        // B. Color Code based on Operation Type (These are the main operations of the model,so we gave them special colors)
         ImU32 color = IM_COL32(60, 60, 60, 255); // Default (Gray)
         if (step.debug_name.find("Conv") != std::string::npos)
             color = IM_COL32(180, 60, 60, 255); // Red
@@ -307,7 +305,6 @@ void draw_model_graph(InferenceEngine &engine)
 
         // D. Draw Text (Op Name + Output Shape)
         std::string label = step.debug_name;
-        // Strip the long "Convolution" prefix if preferred, or keep as is
 
         draw_list->AddText(ImVec2(x + 10, y + 5), IM_COL32(255, 255, 255, 255), label.c_str());
 
@@ -378,10 +375,10 @@ int main(int, char **)
     // 4. Load Engine
     std::cout << "Loading Engine..." << std::endl;
     ModelLoader loader;
-    if (!loader.load("tiny_yolo.onnx"))
+    if (!loader.load("tiny_yolo.onnx")) // This will probably fail cuz we constantly nuke /build, i.e where the executable would be
     {
         // Fallback check
-        if (!loader.load("../tiny_yolo.onnx"))
+        if (!loader.load("../tiny_yolo.onnx")) // We put the .onnx in the root,probably not ideal but oh well
         {
             std::cerr << "Failed to load model!" << std::endl;
             return 1;
@@ -415,7 +412,7 @@ int main(int, char **)
         cv::cvtColor(frame, rgb_frame, cv::COLOR_BGR2RGB);
         webcam_tex.update(rgb_frame);
 
-        // C. RUN AI (Synchronous - No threads, no crashes)
+        // C. RUN AI (Synchronous - Probably not ideal but the model isn't heavy so shouldnt have lag)
         // 1. Prepare Data
         std::vector<float> raw_input = preprocess(frame);
         std::memcpy(input_tensor.data<float>(), raw_input.data(), raw_input.size() * sizeof(float));
@@ -479,8 +476,8 @@ int main(int, char **)
                 // Filter: Only show "convolution" layers
                 for (const auto &name : all_layers)
                 {
-                    // Check if name contains "conv" (case insensitive check usually better, but ONNX is consistent)
-                    if (name.find("convolution") != std::string::npos || name.find("Conv") != std::string::npos)
+                    // Check if name contains "conv" (case insensitive check usually better, but ONNX is consistent) 
+                    if (name.find("convolution") != std::string::npos || name.find("Conv") != std::string::npos) // We should probably restrict to output convs ...
                     {
                         if (ImGui::Selectable(name.c_str(), selected_layer == name))
                             selected_layer = name;
@@ -489,7 +486,7 @@ int main(int, char **)
                 ImGui::EndCombo();
             }
 
-            // C. Channel Slider (Only for X-Ray)
+            // C. Channel Slider (For feature maps,although we'll probably stick to channel 0 for interpretations)
             if (selected_layer != "Input (Webcam)")
             {
                 ImGui::SliderInt("Channel Filter", &selected_channel, 0, 128);
@@ -501,7 +498,7 @@ int main(int, char **)
 
             if (selected_layer == "Input (Webcam)")
             {
-                // --- MODE A: STANDARD DETECTION ---
+                // --- MODE A: standard detection ---
 
                 // 1. Draw Webcam Image
                 if (webcam_tex.id != 0)
@@ -566,7 +563,7 @@ int main(int, char **)
             }
             else
             {
-                // --- MODE B: X-RAY VISION ---
+                // --- MODE B: Internal architecture vision ---
 
                 Tensor *t = engine.get_internal_tensor(selected_layer);
                 if (t)

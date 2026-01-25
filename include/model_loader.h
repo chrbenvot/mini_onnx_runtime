@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include "onnx.pb.h"
-#include "tensor.h" //  Now we need to create Tensors
+#include "tensor.h" 
 
 class ModelLoader
 {

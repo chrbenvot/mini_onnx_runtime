@@ -67,7 +67,7 @@ float calculate_iou(const Box& a, const Box& b) {
     return inter / union_area;
 }
 
-// --- NEW: Letterbox Info Struct ---
+// --- Letterbox Info Struct ---
 struct LetterboxInfo
 {
     float scale;
@@ -77,7 +77,7 @@ struct LetterboxInfo
     int original_h;
 };
 
-// --- NEW: Preprocess with Letterboxing ---
+// ---  Preprocess with Letterboxing ---  Although I dont think this is necessary,NMS is what solved the issue of metric being low
 std::vector<float> preprocess_letterbox(const cv::Mat &src, LetterboxInfo &info)
 {
     info.original_w = src.cols;
@@ -124,7 +124,7 @@ std::vector<float> preprocess_letterbox(const cv::Mat &src, LetterboxInfo &info)
     }
     return output;
 }
-// --- NEW: Non-Maximum Suppression ---
+// --- Non-Maximum Suppression ---
 std::vector<Box> perform_nms(std::vector<Box> &boxes, float nms_threshold)
 {
     if (boxes.empty())
@@ -175,8 +175,8 @@ std::vector<Box> perform_nms(std::vector<Box> &boxes, float nms_threshold)
     return keep;
 }
 
-// --- UPDATED: Decode with Coordinate Correction ---
-// Now takes 'LetterboxInfo' to map boxes back to original image
+// ---  Decode with Coordinate Correction ---
+// Now takes 'LetterboxInfo' to map boxes back to original image,again this thing specifically maybe nothat helpful
 std::vector<Box> decode(const float *data, const LetterboxInfo &info)
 {
     std::vector<Box> boxes;
@@ -222,7 +222,7 @@ std::vector<Box> decode(const float *data, const LetterboxInfo &info)
                 float canvas_x2 = bx + bw / 2.0f;
                 float canvas_y2 = by + bh / 2.0f;
 
-                // 3. CRITICAL: Map back to Original Image
+                // 3. Map back to Original Image
                 // Formula: original = (canvas - offset) / scale
                 Box box;
                 box.class_id = best_c;
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 
     std::string model_path = argv[1];
     std::string data_dir = argv[2];
-    std::string img_dir = data_dir + "/JPEGImages"; // Fixed Path
+    std::string img_dir = data_dir + "/JPEGImages"; 
     std::string lbl_dir = data_dir + "/labels";
 
     ModelLoader loader;
@@ -319,7 +319,7 @@ int main(int argc, char **argv)
 
         // C. Run AI with Letterbox
         LetterboxInfo info;
-        std::vector<float> raw = preprocess_letterbox(img, info); // Use new function
+        std::vector<float> raw = preprocess_letterbox(img, info); 
 
         std::memcpy(input_tensor.data<float>(), raw.data(), raw.size() * sizeof(float));
         engine.run(input_tensor);

@@ -72,7 +72,7 @@ void UpsampleOp::forward_gpu(const std::vector<Tensor *> &inputs,
             cudaMemcpy(s_data.data(), scales_tensor->device_data(), 
                        scales_tensor->size() * sizeof(float), cudaMemcpyDeviceToHost);
         } else {
-            // Fallback if somehow it's on CPU (rare in full GPU run)
+            // Fallback if somehow it's on CPU (rare in full GPU run which we'll be doing in demo)
             const float* ptr = scales_tensor->data<float>();
             s_data.assign(ptr, ptr + scales_tensor->size());
         }

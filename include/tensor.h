@@ -57,14 +57,14 @@ public:
         reshape(shape);
     }
 
-    // --- 2. Move Constructor (The Speed Upgrade) ---
+    // --- 2. Move Constructor (Didn't affect speed all that much but added anyway) ---
     // Called when: Tensor t = std::move(temp_tensor);
     Tensor(Tensor &&other) noexcept
         : m_name(std::move(other.m_name)),
           m_dtype(other.m_dtype),
-          m_buffer(std::move(other.m_buffer)),   // O(1) Pointer Steal
+          m_buffer(std::move(other.m_buffer)),   // Pointer Steal
           m_shape(std::move(other.m_shape)),     // O(1)
-          m_strides(std::move(other.m_strides)), // O(1)
+          m_strides(std::move(other.m_strides)), // 
           m_num_elements(other.m_num_elements),
           m_bytes_per_elements(other.m_bytes_per_elements),
           m_device_ptr(other.m_device_ptr),
@@ -158,7 +158,6 @@ public:
         return *this;
     }
 
-    // --- Existing Functionality ---
 
     void reshape(const std::vector<int64_t> &shape)
     {

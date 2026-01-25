@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 
+// In retrospect this is uselss but we kept it anyway
 // Kernels
 
 // Kernel: Float -> Int8/Uint8

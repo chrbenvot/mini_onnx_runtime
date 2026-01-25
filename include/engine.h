@@ -77,7 +77,6 @@ public:
                     m_tensor_registry[input_name] = Tensor(DataType::FLOAT32, {}, input_name);
                 }
                 // Store POINTER to the tensor map entry.
-                // Map pointers are stable even if we add more keys later.
                 step.inputs.push_back(&m_tensor_registry[input_name]);
             }
 
@@ -113,7 +112,7 @@ public:
         {
             std::string type = step.op->get_op_type();
             if (type == "Conv" || type == "Gemm" || type == "Relu" || type == "BatchNormalization" || type == "LeakyRelu" || type == "MaxPool" || type == "Mul" || type == "Add")
-                m_mode = CUDA;
+                m_mode = CUDA; // This shouldn't be like this lul but We added them incrementally
             else
                 m_mode = CPU;
             if (m_mode == CUDA)
@@ -176,7 +175,7 @@ public:
             return;
         }
 
-        // DOT language header
+        // DOT language header,this isn't all that useful in restrospect cuz we added parsing in the GUI app directly
         file << "digraph G {" << std::endl;
         file << "  rankdir=LR;" << std::endl; // Left to Right layout
         file << "  node [shape=box, style=\"filled\", fillcolor=\"#E6E6FF\"];" << std::endl;
@@ -234,7 +233,7 @@ public:
     }
     ExecutionMode m_mode = CPU; // TODO: add proper execution switching probably
 
-    // --- X-RAY MODE HELPERS ---
+    // --- Internal architecture MODE HELPERS ---
 
     // 1. Get a list of all layer names (for the dropdown)
     std::vector<std::string> get_layer_names() const {

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 
+// Again this turned out to be useless
 class QuantizeLinearOp : public Operator
 {
 public:

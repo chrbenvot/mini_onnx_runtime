@@ -371,7 +371,7 @@ void test_upsample() {
     X.allocate_device_memory(); X.copy_to_device();
     // Note: Scales can be on CPU or GPU depending on implementation, 
     // but our forward_gpu handles CPU-side read or GPU-side copy. 
-    // Let's keep it on CPU for simplicity as our forward_gpu handles it.
+    // we'll keep it on CPU for simplicity as our forward_gpu handles it.
 
     Tensor Y(DataType::FLOAT32, {});
     UpsampleOp op;
