@@ -183,6 +183,166 @@ std::vector<Detection> decode_output(const float *data, float conf_threshold)
     return clean_boxes;
 }
 
+// --- VISUALIZATION HELPER ---
+// Converts a specific channel of a tensor into a colorful Heatmap
+cv::Mat visualize_tensor(Tensor *tensor, int channel_idx = 0)
+{
+    if (!tensor)
+        return cv::Mat();
+
+    // 1. Get Data (Handle GPU memory if necessary)
+    // Note: If you optimized memory to reuse buffers, this might show garbage.
+    // But for a basic engine, the data persists.
+    std::vector<float> cpu_data;
+    const float *data_ptr = nullptr;
+
+    if (tensor->is_on_device())
+    {
+        cpu_data.resize(tensor->size());
+        cudaMemcpy(cpu_data.data(), tensor->device_data(), tensor->size() * sizeof(float), cudaMemcpyDeviceToHost);
+        data_ptr = cpu_data.data();
+    }
+    else
+    {
+        data_ptr = tensor->data<float>();
+    }
+
+    // 2. Extract specific 2D channel
+    // Shape is [N, C, H, W]
+    int C = tensor->shape()[1];
+    int H = tensor->shape()[2];
+    int W = tensor->shape()[3];
+    int stride = H * W;
+
+    // Safety check
+    if (channel_idx >= C)
+        channel_idx = 0;
+
+    // Find Min/Max for normalization
+    float min_val = 1e9, max_val = -1e9;
+    const float *channel_start = data_ptr + channel_idx * stride;
+
+    for (int i = 0; i < stride; ++i)
+    {
+        float val = channel_start[i];
+        if (val < min_val)
+            min_val = val;
+        if (val > max_val)
+            max_val = val;
+    }
+
+    // Avoid divide by zero
+    if (std::abs(max_val - min_val) < 0.0001f)
+        max_val = min_val + 1.0f;
+
+    // 3. Normalize to 0-255 grayscale
+    cv::Mat gray(H, W, CV_8UC1);
+    for (int y = 0; y < H; ++y)
+    {
+        for (int x = 0; x < W; ++x)
+        {
+            float val = channel_start[y * W + x];
+            float norm = (val - min_val) / (max_val - min_val);
+            gray.at<uint8_t>(y, x) = static_cast<uint8_t>(norm * 255.0f);
+        }
+    }
+
+    // 4. Colorize (Heatmap style)
+    cv::Mat color;
+    cv::applyColorMap(gray, color, cv::COLORMAP_JET);
+
+    // 5. Resize for visibility (Internal layers are tiny, e.g., 13x13)
+    cv::resize(color, color, cv::Size(416, 416), 0, 0, cv::INTER_NEAREST);
+
+    return color;
+}
+
+// --- GRAPH VISUALIZER HELPERS ---
+void draw_model_graph(InferenceEngine &engine)
+{
+    ImGui::Begin("Model Architecture");
+
+    // 1. Get the ORDERED execution plan
+    const auto &plan = engine.get_execution_plan();
+
+    ImDrawList *draw_list = ImGui::GetWindowDrawList();
+    ImVec2 cursor = ImGui::GetCursorScreenPos();
+
+    float start_x = cursor.x + 50;
+    float start_y = cursor.y + 20; // Offset for scrolling
+
+    // Layout Constants
+    const float NODE_WIDTH = 220;
+    const float NODE_HEIGHT = 40;
+    const float VERTICAL_SPACING = 70;
+
+    for (size_t i = 0; i < plan.size(); ++i)
+    {
+        const auto &step = plan[i];
+
+        float x = start_x;
+        float y = start_y + i * VERTICAL_SPACING;
+
+        // A. Draw Line to Previous Node
+        if (i > 0)
+        {
+            draw_list->AddLine(
+                ImVec2(x + NODE_WIDTH / 2, y - VERTICAL_SPACING + NODE_HEIGHT),
+                ImVec2(x + NODE_WIDTH / 2, y),
+                IM_COL32(255, 255, 255, 100), 2.0f);
+        }
+
+        // B. Color Code based on Operation Type
+        ImU32 color = IM_COL32(60, 60, 60, 255); // Default (Gray)
+        if (step.debug_name.find("Conv") != std::string::npos)
+            color = IM_COL32(180, 60, 60, 255); // Red
+        else if (step.debug_name.find("Pool") != std::string::npos)
+            color = IM_COL32(60, 60, 180, 255); // Blue
+        else if (step.debug_name.find("Relu") != std::string::npos)
+            color = IM_COL32(60, 180, 60, 255); // Green
+
+        // C. Draw Node Box
+        draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + NODE_WIDTH, y + NODE_HEIGHT), color, 5.0f);
+        draw_list->AddRect(ImVec2(x, y), ImVec2(x + NODE_WIDTH, y + NODE_HEIGHT), IM_COL32(255, 255, 255, 200), 5.0f);
+
+        // D. Draw Text (Op Name + Output Shape)
+        std::string label = step.debug_name;
+        // Strip the long "Convolution" prefix if preferred, or keep as is
+
+        draw_list->AddText(ImVec2(x + 10, y + 5), IM_COL32(255, 255, 255, 255), label.c_str());
+
+        // Show Output Shape of this layer (if available)
+        if (!step.outputs.empty() && step.outputs[0])
+        {
+            const auto &shape = step.outputs[0]->shape();
+            char shape_buf[64];
+            if (shape.size() == 4)
+                sprintf(shape_buf, "[%ld, %ld, %ld, %ld]", shape[0], shape[1], shape[2], shape[3]);
+            else
+                sprintf(shape_buf, "Shape: ?");
+
+            draw_list->AddText(ImVec2(x + 10, y + 20), IM_COL32(200, 200, 200, 255), shape_buf);
+        }
+
+        // E. Hover Tooltip (Inputs -> Outputs)
+        ImVec2 mouse = ImGui::GetMousePos();
+        if (mouse.x >= x && mouse.x <= x + NODE_WIDTH && mouse.y >= y && mouse.y <= y + NODE_HEIGHT)
+        {
+            std::string tooltip = "Op: " + step.debug_name + "\n\nInputs:";
+            for (auto *t : step.inputs)
+                tooltip += "\n - " + t->name();
+            tooltip += "\n\nOutputs:";
+            for (auto *t : step.outputs)
+                tooltip += "\n - " + t->name();
+
+            ImGui::SetTooltip("%s", tooltip.c_str());
+        }
+    }
+
+    // Scroll buffer
+    ImGui::Dummy(ImVec2(NODE_WIDTH, plan.size() * VERTICAL_SPACING));
+    ImGui::End();
+}
 int main(int, char **)
 {
     // 1. Setup Window
@@ -243,6 +403,7 @@ int main(int, char **)
     // --- Main Loop ---
     while (!glfwWindowShouldClose(window))
     {
+
         glfwPollEvents();
 
         // A. Capture
@@ -292,106 +453,146 @@ int main(int, char **)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        draw_model_graph(engine);
 
         {
             ImGui::Begin("YOLO Dashboard");
 
-            // --- CONTROLS ---
-            static float threshold = 0.20f; // Lower default threshold since we have smoothing now
+            // --- 1. CONTROLS ---
+            // A. Sensitivity Slider
+            static float threshold = 0.20f;
             ImGui::SliderFloat("Confidence", &threshold, 0.01f, 1.0f);
 
-            // --- DRAW IMAGE ---
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            if (webcam_tex.id != 0)
-                ImGui::Image((void *)(intptr_t)webcam_tex.id, ImVec2(640, 480));
+            // B. Layer Selector (Filtered)
+            static std::string selected_layer = "Input (Webcam)";
+            static int selected_channel = 0;
 
-            // --- STABILIZER LOGIC START ---
+            // Get all names, but we will filter them in the dropdown
+            const std::vector<std::string> all_layers = engine.get_layer_names();
 
-            // 1. Get Fresh Detections from AI
-            std::vector<Detection> fresh_detections = decode_output(out_data, threshold);
-
-            // 2. Age the Old Boxes (Decrease Timer)
-            for (auto &box : persistent_boxes)
+            if (ImGui::BeginCombo("View Layer", selected_layer.c_str()))
             {
-                box.timer--;
-            }
+                // Always offer the default view
+                if (ImGui::Selectable("Input (Webcam)", selected_layer == "Input (Webcam)"))
+                    selected_layer = "Input (Webcam)";
 
-            // 3. Merge Fresh Detections into Persistent Boxes
-            for (const auto &new_det : fresh_detections)
-            {
-                bool matched = false;
-
-                // Try to find a matching box in our history
-                for (auto &old_box : persistent_boxes)
+                // Filter: Only show "convolution" layers
+                for (const auto &name : all_layers)
                 {
-                    // If IoU > 0.3, assume it's the same object
-                    if (iou(new_det, old_box) > 0.3f && new_det.class_id == old_box.class_id)
+                    // Check if name contains "conv" (case insensitive check usually better, but ONNX is consistent)
+                    if (name.find("convolution") != std::string::npos || name.find("Conv") != std::string::npos)
                     {
-                        // UPDATE the old box with new coordinates
-                        old_box.x = new_det.x;
-                        old_box.y = new_det.y;
-                        old_box.w = new_det.w;
-                        old_box.h = new_det.h;
-                        old_box.confidence = new_det.confidence;
-                        old_box.timer = BOX_LIFETIME; // RESET Timer (It lives!)
-                        matched = true;
-                        break;
+                        if (ImGui::Selectable(name.c_str(), selected_layer == name))
+                            selected_layer = name;
                     }
                 }
+                ImGui::EndCombo();
+            }
 
-                // If no match found, this is a brand new object
-                if (!matched)
+            // C. Channel Slider (Only for X-Ray)
+            if (selected_layer != "Input (Webcam)")
+            {
+                ImGui::SliderInt("Channel Filter", &selected_channel, 0, 128);
+            }
+            ImGui::Separator();
+
+            // --- 2. DISPLAY LOGIC ---
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+
+            if (selected_layer == "Input (Webcam)")
+            {
+                // --- MODE A: STANDARD DETECTION ---
+
+                // 1. Draw Webcam Image
+                if (webcam_tex.id != 0)
+                    ImGui::Image((void *)(intptr_t)webcam_tex.id, ImVec2(640, 480));
+
+                // 2. Decode Fresh Detections
+                std::vector<Detection> fresh_detections = decode_output(out_data, threshold);
+
+                // 3. Stabilizer Logic (Your existing TTL logic)
+                for (auto &box : persistent_boxes)
+                    box.timer--; // Age old boxes
+
+                for (const auto &new_det : fresh_detections)
                 {
-                    Detection det = new_det;
-                    det.timer = BOX_LIFETIME; // Give it full life
-                    persistent_boxes.push_back(det);
+                    bool matched = false;
+                    for (auto &old_box : persistent_boxes)
+                    {
+                        if (iou(new_det, old_box) > 0.3f && new_det.class_id == old_box.class_id)
+                        {
+                            old_box = new_det;
+                            old_box.timer = BOX_LIFETIME; // Reset Timer
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched)
+                    {
+                        Detection det = new_det;
+                        det.timer = BOX_LIFETIME;
+                        persistent_boxes.push_back(det);
+                    }
+                }
+                // Cleanup dead boxes
+                persistent_boxes.erase(
+                    std::remove_if(persistent_boxes.begin(), persistent_boxes.end(),
+                                   [](const Detection &d)
+                                   { return d.timer <= 0; }),
+                    persistent_boxes.end());
+
+                // 4. Draw Persistent Boxes
+                ImDrawList *draw_list = ImGui::GetWindowDrawList();
+                float img_w = 640.0f;
+                float img_h = 480.0f;
+
+                for (const auto &det : persistent_boxes)
+                {
+                    float alpha = (float)det.timer / BOX_LIFETIME;
+                    ImU32 color = IM_COL32(0, 255, 0, (int)(255 * alpha));
+
+                    float left = pos.x + (det.x - det.w / 2) * img_w;
+                    float top = pos.y + (det.y - det.h / 2) * img_h;
+                    float right = pos.x + (det.x + det.w / 2) * img_w;
+                    float bottom = pos.y + (det.y + det.h / 2) * img_h;
+
+                    draw_list->AddRect(ImVec2(left, top), ImVec2(right, bottom), color, 3.0f);
+
+                    char label_buf[32];
+                    sprintf(label_buf, "%s %.2f", det.label.c_str(), det.confidence);
+                    draw_list->AddText(ImVec2(left, top - 20), IM_COL32(255, 255, 255, (int)(255 * alpha)), label_buf);
+                }
+                ImGui::Text("Active Objects: %lu", persistent_boxes.size());
+            }
+            else
+            {
+                // --- MODE B: X-RAY VISION ---
+
+                Tensor *t = engine.get_internal_tensor(selected_layer);
+                if (t)
+                {
+                    // Generate Heatmap
+                    cv::Mat heat_map = visualize_tensor(t, selected_channel);
+
+                    // Upload to GPU Texture
+                    webcam_tex.update(heat_map);
+
+                    // Draw Heatmap
+                    ImGui::Image((void *)(intptr_t)webcam_tex.id, ImVec2(640, 480));
+
+                    // Draw Layer Stats overlay
+                    ImGui::TextColored(ImVec4(1, 1, 0, 1), "Layer: %s", selected_layer.c_str());
+                    ImGui::Text("Resolution: %ld x %ld", t->shape()[2], t->shape()[3]);
+                    ImGui::Text("Feature Channels: %ld", t->shape()[1]);
+                }
+                else
+                {
+                    ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error: Tensor data not found on GPU.");
                 }
             }
 
-            // 4. Remove Dead Boxes (Timer <= 0)
-            // This idiom efficiently deletes items from a vector
-            persistent_boxes.erase(
-                std::remove_if(persistent_boxes.begin(), persistent_boxes.end(),
-                               [](const Detection &d)
-                               { return d.timer <= 0; }),
-                persistent_boxes.end());
-
-            // --- STABILIZER LOGIC END ---
-
-            // 5. Draw the PERSISTENT boxes (not the fresh ones)
-            ImDrawList *draw_list = ImGui::GetWindowDrawList();
-            float img_w = 640.0f;
-            float img_h = 480.0f;
-
-            for (const auto &det : persistent_boxes)
-            {
-                // Fade out color as timer runs out
-                float alpha = (float)det.timer / BOX_LIFETIME;
-                ImU32 color = IM_COL32(0, 255, 0, (int)(255 * alpha));
-                ImU32 text_bg = IM_COL32(0, 0, 0, (int)(200 * alpha));
-                ImU32 text_col = IM_COL32(255, 255, 255, (int)(255 * alpha));
-
-                float center_x = pos.x + det.x * img_w;
-                float center_y = pos.y + det.y * img_h;
-                float width = det.w * img_w;
-                float height = det.h * img_h;
-
-                float left = center_x - width / 2.0f;
-                float top = center_y - height / 2.0f;
-                float right = center_x + width / 2.0f;
-                float bottom = center_y + height / 2.0f;
-
-                draw_list->AddRect(ImVec2(left, top), ImVec2(right, bottom), color, 3.0f);
-
-                char label_buf[32];
-                sprintf(label_buf, "%s %.2f", det.label.c_str(), det.confidence);
-                draw_list->AddText(ImVec2(left, top - 20), text_col, label_buf);
-            }
-
-            ImGui::Text("Active Objects: %lu", persistent_boxes.size());
             ImGui::End();
         }
-
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);

@@ -234,6 +234,28 @@ public:
     }
     ExecutionMode m_mode = CPU; // TODO: add proper execution switching probably
 
+    // --- X-RAY MODE HELPERS ---
+
+    // 1. Get a list of all layer names (for the dropdown)
+    std::vector<std::string> get_layer_names() const {
+        std::vector<std::string> names;
+        for (const auto& pair : m_tensor_registry) {
+            names.push_back(pair.first);
+        }
+        return names;
+    }
+
+    // 2. Get a pointer to a specific internal tensor
+    Tensor* get_internal_tensor(const std::string& name) {
+        if (m_tensor_registry.find(name) != m_tensor_registry.end()) {
+            return &m_tensor_registry[name];
+        }
+        return nullptr;
+    }
+    std::vector<ExecutionStep> get_execution_plan() // This is needed for the GUI so we can show the ORDERED architecture
+    {
+        return m_execution_plan;
+    }
 private:
     onnx::GraphProto m_graph;
     std::map<std::string, Tensor> m_tensor_registry;

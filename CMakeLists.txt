@@ -155,3 +155,44 @@ target_link_libraries(gui_app PRIVATE
     CUDA::cublas
     CUDA::cudart
 )
+
+
+# --- VOC EVALUATOR ---
+add_executable(voc_eval
+    src/voc_eval.cpp
+    ${OPERATOR_CU_FILES}
+    ${ONNX_PROTO_SRCS} 
+)
+
+target_link_libraries(voc_eval
+    onnx_proto
+    ${OpenCV_LIBS} 
+    CUDA::cublas 
+    CUDA::cudart
+)
+
+target_include_directories(voc_eval PRIVATE 
+    include 
+    ${OpenCV_INCLUDE_DIRS}
+    "third_party/onnx"
+)
+
+# --- DEBUG TOOL ---
+add_executable(debug_single
+    src/debug_single.cpp
+    ${OPERATOR_CU_FILES}
+    ${ONNX_PROTO_SRCS} 
+)
+
+target_link_libraries(debug_single
+    onnx_proto
+    ${OpenCV_LIBS} 
+    CUDA::cublas 
+    CUDA::cudart
+)
+
+target_include_directories(debug_single PRIVATE 
+    include 
+    ${OpenCV_INCLUDE_DIRS}
+    "third_party/onnx"
+)
